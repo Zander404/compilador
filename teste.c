@@ -2,20 +2,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include "symbols.h"
-#include "lexico.h"
 
-void main(){
+int main(void){
   FILE *arq;
   char text[100];
-  arq = fopen("./programa1.txt", "r");
+  arq = fopen("program.txt", "r");
   char palavra[100];
-  int num_line = 1;
 
   if (arq != NULL){
-    while(fgets(text, sizeof(text), arq) != NULL) {
+    while(fgets(text, 100, arq) != NULL) {
+
       text[strcspn(text, "\n")] = '\0';
-      checkLine(text, num_line);
-      num_line++;
+
+
+      if(strcmp(text, "principal") == 0){
+        strcpy(palavra, principal);
+        printf("%s", palavra);
+
+      }
     }
 
 
@@ -24,5 +28,4 @@ void main(){
   }
 
   fclose(arq);
-  return;
 }
