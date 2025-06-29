@@ -1,5 +1,5 @@
-// Text Symbols
-#define space 32
+/* Text Symbols */
+#define spacebar 32
 #define exclamation 33
 #define double_quotes 34
 #define sigle_quotes 39
@@ -8,7 +8,7 @@
 
 
 
-// Mathematic Symbols
+/* Mathematic Symbols */
 #define pound_sign 35
 #define asteristic_sign 42
 #define plus_sign 43
@@ -16,7 +16,7 @@
 #define division_sign 47
 
 
-// Compartion Sign
+/* Compartion Sign */
 #define or_simbol 124
 #define and_sign 38
 
@@ -24,18 +24,18 @@
 #define high_sign 62
 
 
-// Delimitation 
+/* Delimitation */
 #define comma 43
 
 
 
-// Others
+/* Others */
 #define decimal_point 46
 
 
 
 
-// Type Bracket
+/* Type Bracket */
 #define open_parethesis 40
 #define close_parethesis 41
 

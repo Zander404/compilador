@@ -1,11 +1,11 @@
 
-// Funções e Modulos
+/* Funções e Modulos */
 #define principal  "PRINCIPAL"
 #define funcao 
 #define retorno
 
 
-// Palavras Reservadas
+/* Palavras Reservadas */
 #define leia
 #define escreva
 #define se
@@ -13,7 +13,7 @@
 #define para
 
 
-// Tipos de Dados
+/* Tipos de Dados */
 #define inteiro
 #define texto
 #define decimal
