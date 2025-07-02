@@ -3,7 +3,7 @@
 #define exclamation 33
 #define double_quotes 34
 #define sigle_quotes 39
-#define semincolon 59
+#define semicolon 59
 
 
 
@@ -25,7 +25,7 @@
 
 
 /* Delimitation */
-#define comma 43
+#define comma 44
 
 
 

@@ -1,13 +1,15 @@
 #ifndef LEXICO_H
 #define LEXICO_H
 
-
-typedef struct Stack{
-  int *data;
-  int top;
-  int size;
-} Stack;
+#include "symbols.h"
 
 void checkLine(const char *line, int num_line);
+
+void checkReservedWord();
+void checkVariable();
+void checkInteger();
+void checkDecimal();
+void checkString(); 
+
 
 #endif

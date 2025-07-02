@@ -1,0 +1,27 @@
+
+#define NUM_RESERVED_WORDS 21
+
+typedef enum {
+    PRINCIPAL,
+    FUNCAO,
+    RETORNO,
+    LEIA,
+    ESCREVA,
+    SE,
+    SENAO,
+    PARA,
+    TIPO_INTEIRO,
+    TIPO_DECIMAL,
+    TIPO_TEXTO,
+    IDENTIFICADOR,
+    VARIAVEL,
+    NUM_INT,
+    NUM_DEC,
+    STRING,
+    OPERADOR_REL,
+    OPERADOR_ARIT,
+    OPERADOR_LOGICO,
+    DELIM,
+    ERRO
+
+} TokenType;
