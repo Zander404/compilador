@@ -1,195 +1,162 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <ctype.h>
 #include <string.h>
 #include "lexico.h"
 #include "ascii_table.h"
+#include "symbols.h"
 
-void checkPrincipal(){
-    printf("principal \n");
-    return ;
+
+int checkPrincipal(const char* line, int num_line){
+  int i = 0;
+  int opened = 0;
+
+  while(line[i] != '\0'){
+    if(line[i] == open_parethesis){
+      opened ++;
+    }else if(line[i] == close_parethesis){
+      opened --;
+    }
+    i++;
+  }
+
+  if(opened == 0){
+    return 1;
+  }
+
+  fprintf(stderr, "[LINHA] %d | [ERROR] Funcao 'PRINCIPAL' MAL FORMULADA \n", num_line);
+  return -1;
 }
 
+void checkVariable(const char* word, int num_line){
+  Token token;
+  token.line = num_line;
 
-void checkFuncao(){
-   printf("funcao \n");
-
-    // Check Function
-    // if ( c == '_' && line[j+1] == '_'){
-    //   int k = 0;
-    //   token[k++] = line[j++];
-    //   token[k++] = line[j++];
-    //
-    //
-    //   while(isalnum(line[j])){
-    //     token[k++] = line[j++];
-    //   }
-    //
-    //   token[k++] = '\0';
-    //   j--;
-    //   printf("[FUNCTION] %s (line %d)", token, num_line);
-    //   continue;
-    //
-    // }
-      return;
-}
-
-void checkLeia(){
-  printf("leia \n");
+  printf("[VARIAVEL]: %s \n", word);
   return ;
 }
 
-void checkEscreva(){
-  printf("escreva \n");
+void checkFunction(const char* word, int num_line){
+  Token token;
+  token.line = num_line;
+
+  printf("[FUNCTION]: %s\n", word);
   return ;
 }
 
-void checkSe(){
-  printf("SE \n");
-  return ;
+void checkReservedWord(const char* word, int num_line){
+  Token token;
+  token.line = num_line;
+
+  token.word = malloc(strlen(word) + 1);
+  if(token.word != NULL){
+    strcpy(token.word, word);
+  }
+  printf("[PALAVRA RESERVADA]: %s \n", word);
+
+  int num_of_reserved_words = NUM_RESERVED_WORDS;
+  int i;
+
+  for(i = 0; i < num_of_reserved_words; i++){
+    if (strcmp(reserved_words[i].word, word) == 0){
+      token.type = reserved_words[i].type;
+      return ;
+    }
+  }
+  token.type = IDENTIFICADOR;
+  return;
 }
 
-void checkSenao(){
-  printf("SENAO \n");
-  return ;
-}
-
-void checkPara(){
-  printf("PARA \n");
-  return ;
-}
-
-void checkInteiro(){
-  printf("INTEIRO \n");
+void checkInteger(){
   return ;
 }
 
 void checkDecimal(){
-   printf("DECIMAL \n");
-    
-    // Check Integer or  Decimal
-    //
-    //
-    // // Check Operators
-    // if(strchr("=<>!&|+-*^", c)){
-    //   token[0] = c;
-    //   token[1] = '\0';
-    //
-    //   if((c == '=' && line[j+1] == '=') || (c == '<' && line[j+1] == '=') || (c == '>' && line[j+1] == '=') || (c == '<' && line[j+1] == '=') || (c == '<' && line[j+1] == '>')){
-    //     token[1] = line[j+1];
-    //     token[2] = '\0';
-    //     j++;
-    //   } 
-    //
-    // }
-    //
-    //
-}
 
-void checkTexto(){
-   printf("TEXTO \n");
-     // Check STRING
-    //
-    //
-    // // Check Variable
-    // if (c == '!'){
-    //   int k = 0;
-    //   token[k++] = c;
-    //   j++;
-    //   while (isalnum(line[j])){
-    //     token[k++] = line[j++];
-    //   }
-    //   token[k] = '\0';
-    //   j--;
-    //   printf("[VARIABLE]  %s (line %d) \n", token, num_line);
-    //   continue;
-    // }
-
-    return;
-  }
-
-
-
-void checkVariavel(){
-  printf("VARIAVEL \n");
   return ;
 }
 
+void checkString(const char *word, int num_line){
+  Token token;
+  token.line = num_line;
+
+  printf("[STRING]: %s \n", word);
+
+  return ;
+}
 
 
 
 void checkLine(const char *line, int num_line){
   int i = 0;
-  char token[100];
+  int k = 0;
+  char lexema[100];
 
   while(line[i] != '\0'){
+    k = 0; 
+    memset(lexema, 0, sizeof(lexema));
 
-    if(isspace(line[i])){
+    while(isspace(line[i]) || line[i] == open_parethesis || line[i] == close_parethesis || line[i] == open_curl_bracket || line[i] == close_curl_bracket) { i++;}
+
+
+
+    /* Verify if is a Variable */
+    if(line[i]  == exclamation) {
+
+      while( line[i] != comma && line[i] != '\0' && line[i] != semicolon  ){
+
+        /* if(isalnum(line[i]) || line[i] == '=' || line[i] == exclamation || line[i] == open_square_bracket || line[i] == close_square_bracket || line[i] == '+' ||){
+          lexema[k++] = line[i];
+        } */ 
+        lexema[k++] =line[i];
       i++;
-      continue;
+      }
+      lexema[k] = '\0';
+      checkVariable(lexema, num_line);
+      
     }
 
-    // ANALISADOR DE PALAVRA RESERVADA
-    if(isalnum(line[i]) && line[i] != exclamation){
-      int k = 0;
-      while(isalnum(line[i])){
-        token[k++] = line[i++]; 
+
+    /* Verify if a Function */
+    if(line[i] == '_' && line[i+1] == '_'){
+      while(line[i] != '\0'){
+        lexema[k++] = line[i++];
+      }
+      checkFunction(lexema, num_line);
+
+    } 
+
+
+    /* Verify if is a ReservedWord */
+    if(isalpha(line[i])){
+      while((isalpha(line[i]))){
+        lexema[k++] = line[i++];
       }
 
-      token[k] = '\0';
-    
-      printf("WORD: %s , LINHA: %d \n", token, num_line);
+      lexema[k] = '\0';
+      checkReservedWord(lexema, num_line);
 
-      if(strcmp(token, "principal") == 0){
-        checkPrincipal();
-        break;
+    } 
 
-      }else if (strcmp(token, "funcao") == 0 ){
-        checkFuncao();
-        break;
+    /* Verify if is a String*/
+    if(line[i] == double_quotes){
+      lexema[k++] = line[i++];
 
-
-      }else if( strcmp(token, "leia") == 0){
-        checkLeia(); 
-        break;
-
-      }else if( strcmp(token, "escreva") == 0){
-        checkEscreva();
-        break;
-
-      }else if (strcmp(token, "se") == 0 ){
-        checkSe();
-        break;
-
-      }else if( strcmp(token, "senao") == 0){
-        checkSenao();
-        break;
-
-      }else if( strcmp(token, "para") == 0){
-        checkPara();
-        break;
-
-      }else if (strcmp(token, "inteiro") == 0 ){
-        checkInteiro();
-        break;
-
-      }else if (strcmp(token, "decimal") == 0 ){
-        checkDecimal();
-        break;
-
-      }else if (strcmp(token, "texto") == 0 ){
-        checkTexto();
-        break;
-
+      while(line[i] != double_quotes && line[i] != '\0'){
+        lexema[k++] = line[i++];
       }
-    // ANALISADOR DE VARIAVEL
-    }else if( line[i] == exclamation){
-        checkVariavel();
-        break;
+      lexema[k++] = line[i++];
+
+      lexema[k] = '\0';
+      checkString(lexema, num_line);
+
     }
-    
+
+
+
     i++;
-    
   }
+
 }
 
 

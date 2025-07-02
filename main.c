@@ -10,6 +10,7 @@ void main(){
   arq = fopen("./programa1.txt", "r");
   char palavra[100];
   int num_line = 1;
+  int hasPrincipalFunction = 0;
 
   if (arq != NULL){
     while(fgets(text, sizeof(text), arq) != NULL) {
@@ -17,12 +18,12 @@ void main(){
       checkLine(text, num_line);
       num_line++;
     }
+    fclose(arq);
 
 
   }else{
     printf("File Don't find");
   }
 
-  fclose(arq);
   return;
 }

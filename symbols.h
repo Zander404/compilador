@@ -1,35 +1,21 @@
+#ifndef SYMBOLS_H
+#define SYMBOLS_H
 
-// Funções e Modulos
-#define principal  "PRINCIPAL"
-#define funcao 
-#define retorno
-
-
-// Palavras Reservadas
-#define leia
-#define escreva
-#define se
-#define senao
-#define para
-
-
-// Tipos de Dados
-#define inteiro
-#define texto
-#define decimal
-
+#include "tokens.h"
 
 typedef struct {
-  char type[20];
-  char value[100];
+  TokenType type;
+  char *word;
   int line;
 
 } Token;
 
+typedef struct {
+  const char* word;
+  TokenType type;
+} ReservedWord;
 
-Token* check_line(const char* linha, int line_number, int* total_tokens);
-
-Token* validate_token(char* type, char* value, int line);
+extern const ReservedWord reserved_words[];
 
 
-
+#endif
