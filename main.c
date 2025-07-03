@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "symbols.h"
+#include "tokens.h"
 #include "lexico.h"
 
 void main(){

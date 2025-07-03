@@ -4,17 +4,16 @@
 #include <string.h>
 #include "lexico.h"
 #include "ascii_table.h"
-#include "symbols.h"
-
+#include "tokens.h"
 
 int checkPrincipal(const char* line, int num_line){
   int i = 0;
   int opened = 0;
 
   while(line[i] != '\0'){
-    if(line[i] == open_parethesis){
+    if(line[i] == OPEN_PAREN){
       opened ++;
-    }else if(line[i] == close_parethesis){
+    }else if(line[i] == CLOSE_PAREN){
       opened --;
     }
     i++;
@@ -28,6 +27,8 @@ int checkPrincipal(const char* line, int num_line){
   return -1;
 }
 
+
+
 void checkVariable(const char* word, int num_line){
   Token token;
   token.line = num_line;
@@ -35,6 +36,8 @@ void checkVariable(const char* word, int num_line){
   printf("[VARIAVEL]: %s \n", word);
   return ;
 }
+
+
 
 void checkFunction(const char* word, int num_line){
   Token token;
@@ -44,7 +47,12 @@ void checkFunction(const char* word, int num_line){
   return ;
 }
 
+
+
 void checkReservedWord(const char* word, int num_line){
+  int num_of_reserved_words = NUM_RESERVED_WORDS;
+  int i;
+
   Token token;
   token.line = num_line;
 
@@ -54,35 +62,69 @@ void checkReservedWord(const char* word, int num_line){
   }
   printf("[PALAVRA RESERVADA]: %s \n", word);
 
-  int num_of_reserved_words = NUM_RESERVED_WORDS;
-  int i;
-
   for(i = 0; i < num_of_reserved_words; i++){
     if (strcmp(reserved_words[i].word, word) == 0){
       token.type = reserved_words[i].type;
       return ;
     }
   }
-  token.type = IDENTIFICADOR;
+  token.type = TK_IDENTIFICADOR;
   return;
 }
 
-void checkInteger(){
+
+void checkInteger(const char *word, int num_line){
+  Token token;
+  token.line = num_line;
+
+  strcpy(token.word, word);
+  printf("[INTEGER] %s", token.word);
   return ;
 }
+
 
 void checkDecimal(){
 
   return ;
 }
 
+
 void checkString(const char *word, int num_line){
   Token token;
   token.line = num_line;
+  strcpy(token.word, word);
+  token.type = TK_STRING;
 
-  printf("[STRING]: %s \n", word);
+  printf("[STRING]: %s \n", token.word);
 
   return ;
+}
+
+
+
+void checkOperator(const char *word, int num_line){
+  Token token;
+  int i;
+  int num_of_valid_operators = NUM_VALID_OPERATORS;
+
+  token.line = num_line;
+
+  token.word = malloc(strlen(word) + 1);
+  if(token.word != NULL){
+    strcpy(token.word, word);
+  }
+
+
+  for(i = 0; i < num_of_valid_operators; i++){
+    if(strcmp(VALID_OPERATORS[i].word, token.word) == 0){
+      token.type = TK_OPERATOR;
+      printf("[OPERATOR] %s \n", word);
+      return ;
+    }
+  }
+  printf("[INVALID OPERATOR] %s \n", token.word);
+  return ;
+
 }
 
 
@@ -96,39 +138,31 @@ void checkLine(const char *line, int num_line){
     k = 0; 
     memset(lexema, 0, sizeof(lexema));
 
-    while(isspace(line[i]) || line[i] == open_parethesis || line[i] == close_parethesis || line[i] == open_curl_bracket || line[i] == close_curl_bracket) { i++;}
-
-
+    while(isspace(line[i]) || line[i] == OPEN_PAREN || line[i] == CLOSE_PAREN || line[i] == OPEN_BRACE || line[i] == CLOSE_BRACE) { i++;}
 
     /* Verify if is a Variable */
-    if(line[i]  == exclamation) {
+    if (line[i]  == EXCLAMATION) {
 
-      while( line[i] != comma && line[i] != '\0' && line[i] != semicolon  ){
-
-        /* if(isalnum(line[i]) || line[i] == '=' || line[i] == exclamation || line[i] == open_square_bracket || line[i] == close_square_bracket || line[i] == '+' ||){
-          lexema[k++] = line[i];
-        } */ 
-        lexema[k++] =line[i];
-      i++;
+      while( line[i] != COMMA && line[i] != '\0' && line[i] != SEMICOLON && line[i] != EQUAL && line[i] != LT && line[i] != GT && line[i] != CLOSE_PAREN){
+        lexema[k++] = line[i++];
       }
       lexema[k] = '\0';
       checkVariable(lexema, num_line);
-      
     }
 
-
     /* Verify if a Function */
-    if(line[i] == '_' && line[i+1] == '_'){
-      while(line[i] != '\0'){
+    else if(line[i] == '_' && line[i+1] == '_'){
+      lexema[k++] = line[i++];
+      lexema[k++] = line[i++];
+      while(line[i] != '\0' && isalnum(line[i])){
         lexema[k++] = line[i++];
       }
       checkFunction(lexema, num_line);
 
-    } 
-
+    }
 
     /* Verify if is a ReservedWord */
-    if(isalpha(line[i])){
+    else if(isalpha(line[i])){
       while((isalpha(line[i]))){
         lexema[k++] = line[i++];
       }
@@ -136,13 +170,13 @@ void checkLine(const char *line, int num_line){
       lexema[k] = '\0';
       checkReservedWord(lexema, num_line);
 
-    } 
+    }
 
     /* Verify if is a String*/
-    if(line[i] == double_quotes){
+    else if(line[i] == DQUOTE){
       lexema[k++] = line[i++];
 
-      while(line[i] != double_quotes && line[i] != '\0'){
+      while(line[i] != DQUOTE && line[i] != '\0'){
         lexema[k++] = line[i++];
       }
       lexema[k++] = line[i++];
@@ -151,7 +185,30 @@ void checkLine(const char *line, int num_line){
       checkString(lexema, num_line);
 
     }
+    else if(isdigit(line[i])){
+      while(isdigit(line[i]) || line[i] == PERIOD){
+        lexema[k++] == line[i++];
+      }
 
+      lexema[k] = '\0';
+      checkDecimal(lexema, num_line);
+
+    
+    }
+
+    k = 0; 
+    memset(lexema, 0, sizeof(lexema));
+ 
+
+    /* Check if is operator */
+    if ( line [i] == EQUAL ||  line [i] == PLUS ||  line [i] == MINUS ||  line [i] == AMP ||  line [i] == ASTERISK ||  line [i] == CARET ||  line [i] == LT ||  line [i] == GT ||  line [i] == PIPE) {
+      while(!isspace(line[i]) && !isalnum(line[i]) && line[i] != '\0'){
+        lexema[k++] = line[i++];
+      }
+      lexema[k] = '\0';
+      checkOperator(lexema, num_line);
+
+    }
 
 
     i++;
