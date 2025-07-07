@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "tokens.h"
+#include "tokens.h" // Mantido para TokenType se usado por symtab ou lexico internamente
 #include "lexico.h"
 #include "memory_manager.h"
-#include "token_list.h"     // Incluído para usar a lista de tokens
+#include "symtab.h"     // Incluído para usar a tabela de símbolos
 
 static int global_curly_brace_balance = 0;
 static int global_square_bracket_balance = 0;
@@ -16,13 +16,13 @@ int main(void){
   char text_buffer[256];
   int num_line = 1;
   BalanceCounters line_counters;
-  const char* input_filename = "./test_lex_strings.txt"; // MODIFICADO PARA TESTE de strings
-  TokenList *the_token_list = NULL;
+  const char* input_filename = "./test_balance_square_mismatch.txt"; // Testando colchetes desbalanceados (mismatch)
+  SymbolTable *symbol_table = NULL;
 
   init_memory_manager(0);
-  the_token_list = create_token_list(100);
-  if (the_token_list == NULL) {
-      fprintf(stderr, "Falha ao criar a lista de tokens. Encerrando.\n");
+  symbol_table = create_symbol_table(50);
+  if (symbol_table == NULL) {
+      fprintf(stderr, "Falha ao criar a tabela de simbolos. Encerrando.\n");
       cleanup_memory_manager();
       return 1;
   }
@@ -34,7 +34,7 @@ int main(void){
     while(fgets(text_buffer, sizeof(text_buffer), arq) != NULL) {
       text_buffer[strcspn(text_buffer, "\n")] = '\0';
 
-      line_counters = checkLine(the_token_list, text_buffer, num_line, global_in_string_literal);
+      line_counters = checkLine(symbol_table, text_buffer, num_line, global_in_string_literal);
 
       global_curly_brace_balance += line_counters.curly_braces;
       global_square_bracket_balance += line_counters.square_brackets;
@@ -54,8 +54,8 @@ int main(void){
 
       if (line_counters.error_line > 0) {
           fprintf(stderr, "Analise interrompida devido a erro na linha %d.\n", num_line);
-          print_token_list(the_token_list);
-          free_token_list(the_token_list);
+          print_symbol_table(symbol_table);
+          free_symbol_table(symbol_table);
           report_memory_usage();
           cleanup_memory_manager();
           return 1;
@@ -65,7 +65,7 @@ int main(void){
     fclose(arq);
   }else{
     fprintf(stderr, "Erro: Arquivo '%s' nao encontrado.\n", input_filename);
-    free_token_list(the_token_list);
+    free_symbol_table(symbol_table);
     cleanup_memory_manager();
     return 1;
   }
@@ -89,18 +89,22 @@ int main(void){
   }
 
   if (final_balance_error) {
-      print_token_list(the_token_list);
-      free_token_list(the_token_list);
+      print_symbol_table(symbol_table);
+      free_symbol_table(symbol_table);
       report_memory_usage();
       cleanup_memory_manager();
       return 1;
   }
 
-  printf("Analise lexica e de balanceamento concluida com sucesso para o arquivo %s.\n", input_filename);
-  // Removido o AVISO, pois este arquivo de teste é para casos válidos.
-  print_token_list(the_token_list);
+  printf("Analise lexica e de balanceamento concluida para o arquivo %s.\n", input_filename);
+  if (strstr(input_filename, "invalid") != NULL || strstr(input_filename, "error") != NULL || strstr(input_filename, "mismatch") != NULL || strstr(input_filename, "unclosed") != NULL) {
+    if (!final_balance_error && line_counters.error_line == 0) {
+        printf("AVISO: Esperava-se um erro lexico/sintatico que interrompesse ou um erro de balanceamento final para '%s', mas nenhum foi detectado.\n", input_filename);
+    }
+  }
+  print_symbol_table(symbol_table);
 
-  free_token_list(the_token_list);
+  free_symbol_table(symbol_table);
   report_memory_usage();
   cleanup_memory_manager();
 
