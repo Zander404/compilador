@@ -14,7 +14,7 @@ principal(){
  se (!a <= !b1)
  escreva("A é maior", !a);
  senao escreva("B é maior", !b);
- para (!d = 0; !d<=100; !d=!d+2){
+ para (!d = 0; !d<=100; !d = !d+2){
  escreva("D", !d);
  }
 }
