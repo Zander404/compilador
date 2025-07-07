@@ -1,44 +1,55 @@
 #include "memory_manager.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+#include <string.h> // Para NULL, embora stddef.h seja mais comum para size_t
 
 #define DEFAULT_MAX_MEMORY_KB 2048
-#define INITIAL_ALLOCATION_CAPACITY 100
+#define INITIAL_ALLOCATION_CAPACITY 100 // Capacidade inicial para o array de registros
 
-static AllocationRecord *allocation_records = NULL;
-static size_t allocation_count = 0;
-static size_t allocation_capacity = 0;
-static size_t current_memory_usage = 0;
-static size_t peak_memory_usage = 0;
-static size_t max_memory_bytes = 0;
+// Estrutura interna para rastrear uma alocação individual
+typedef struct {
+    void *ptr;
+    size_t size;
+    // Adicionar char file[256] e int line; aqui se quiser rastrear origem da alocação
+} AllocationRecord;
 
-// Função auxiliar para encontrar um registro de alocação
-static int find_allocation_record(void *ptr) {
-    for (size_t i = 0; i < allocation_count; ++i) {
-        if (allocation_records[i].ptr == ptr) {
-            return i;
-        }
-    }
-    return -1; // Não encontrado
-}
+// Variáveis estáticas para o gerenciador de memória
+static AllocationRecord *allocation_records = NULL; // Array dinâmico de registros
+static size_t allocation_count = 0;          // Número de alocações ativas
+static size_t allocation_capacity = 0;       // Capacidade atual do array allocation_records
+static size_t current_memory_usage = 0;      // Memória total atualmente alocada em bytes
+static size_t peak_memory_usage = 0;         // Pico de memória utilizada em bytes
+static size_t max_memory_bytes = 0;          // Limite máximo de memória em bytes
 
-// Função auxiliar para redimensionar o array de registros de alocação
+// Função auxiliar para redimensionar o array de registros de alocação se necessário
 static int resize_allocation_records_if_needed() {
     if (allocation_count >= allocation_capacity) {
         size_t new_capacity = (allocation_capacity == 0) ? INITIAL_ALLOCATION_CAPACITY : allocation_capacity * 2;
         AllocationRecord *new_records = (AllocationRecord *)realloc(allocation_records, new_capacity * sizeof(AllocationRecord));
+
         if (new_records == NULL) {
-            // Não podemos usar managed_malloc aqui, pois estamos dentro do gerenciador
-            fprintf(stderr, "ERRO Fatal: Falha ao realocar registros de memoria interna do gerenciador.\n");
-            // Tentar liberar o que já foi alocado pelo programa antes de sair
-            cleanup_memory_manager();
+            // Falha crítica: não foi possível nem alocar memória para rastreamento.
+            // Usar fprintf para stderr, pois printf pode usar malloc internamente.
+            fprintf(stderr, "ERRO FATAL: Falha ao realocar registros de memoria interna do gerenciador.\n");
+            // Não chamar cleanup_memory_manager() aqui para evitar recursão se realloc falhar dentro dele.
+            // Apenas sair. O SO limpará a memória do processo.
             exit(EXIT_FAILURE);
         }
         allocation_records = new_records;
         allocation_capacity = new_capacity;
     }
     return 0; // Sucesso
+}
+
+// Função auxiliar para encontrar o índice de um ponteiro nos registros
+// Retorna -1 se não encontrado.
+static int find_allocation_record_index(void *ptr) {
+    for (size_t i = 0; i < allocation_count; ++i) {
+        if (allocation_records[i].ptr == ptr) {
+            return (int)i;
+        }
+    }
+    return -1;
 }
 
 void init_memory_manager(size_t max_memory_kb) {
@@ -48,51 +59,43 @@ void init_memory_manager(size_t max_memory_kb) {
         max_memory_bytes = max_memory_kb * 1024;
     }
 
-    // Inicializa o array de registros
     allocation_records = (AllocationRecord *)malloc(INITIAL_ALLOCATION_CAPACITY * sizeof(AllocationRecord));
     if (allocation_records == NULL) {
-        fprintf(stderr, "ERRO Fatal: Falha ao inicializar gerenciador de memoria (registros).\n");
+        fprintf(stderr, "ERRO FATAL: Falha ao inicializar gerenciador de memoria (registros de alocacao).\n");
         exit(EXIT_FAILURE);
     }
     allocation_capacity = INITIAL_ALLOCATION_CAPACITY;
     allocation_count = 0;
     current_memory_usage = 0;
     peak_memory_usage = 0;
-    //printf("Memory manager initialized with %zu KB limit.\n", max_memory_bytes / 1024);
+    // printf("Memory manager initialized. Limit: %zu KB\n", max_memory_bytes / 1024);
 }
 
 void* managed_malloc(size_t size) {
     if (allocation_records == NULL) {
-        // Garante que init_memory_manager foi chamado
-        // Alternativamente, poderia chamar init_memory_manager com default aqui,
-        // mas é melhor prática que o usuário chame explicitamente.
-        fprintf(stderr, "ERRO: Gerenciador de memoria nao inicializado antes de managed_malloc.\n");
+        fprintf(stderr, "ERRO: Gerenciador de memoria nao inicializado. Chame init_memory_manager() primeiro.\n");
         exit(EXIT_FAILURE);
     }
-
-    if (size == 0) {
-        // Comportamento padrão do malloc para size 0 pode variar, melhor ser explícito.
-        // Poderia retornar NULL ou um ponteiro especial. Para simplificar, não alocamos.
-        return NULL;
-    }
+    if (size == 0) return NULL; // Comportamento padrão do malloc
 
     if (current_memory_usage + size > max_memory_bytes) {
-        fprintf(stderr, "ERRO Memoria Insuficiente: Tentativa de alocar %zu bytes, total excederia %zu bytes.\n", size, max_memory_bytes);
-        cleanup_memory_manager(); // Tenta liberar o que foi alocado antes
+        fprintf(stderr, "ERRO Memoria Insuficiente: Tentativa de alocar %zu bytes. Limite maximo de %zu bytes seria excedido.\n", size, max_memory_bytes);
+        // Não chamar cleanup_memory_manager() aqui, pois pode levar a loop se ele mesmo usar managed_malloc/free.
+        // Apenas reportar e sair.
+        report_memory_usage(); // Mostra o estado antes de sair
         exit(EXIT_FAILURE);
     }
 
     void *ptr = malloc(size);
     if (ptr == NULL) {
-        fprintf(stderr, "ERRO Memoria Insuficiente: malloc retornou NULL ao tentar alocar %zu bytes.\n", size);
-        cleanup_memory_manager();
+        fprintf(stderr, "ERRO Memoria Insuficiente: malloc retornou NULL para %zu bytes.\n", size);
+        report_memory_usage();
         exit(EXIT_FAILURE);
     }
 
-    if (resize_allocation_records_if_needed() != 0) {
-        // Erro já foi impresso por resize_allocation_records_if_needed
-        free(ptr); // Libera o que acabamos de alocar
-        exit(EXIT_FAILURE); // cleanup_memory_manager já foi chamado
+    if (resize_allocation_records_if_needed() != 0) { // Se falhar, já deu exit
+        free(ptr); // Libera o que foi alocado por malloc se o rastreamento falhar
+        exit(EXIT_FAILURE); // resize_allocation_records_if_needed já imprimiu erro e saiu
     }
 
     allocation_records[allocation_count].ptr = ptr;
@@ -105,14 +108,15 @@ void* managed_malloc(size_t size) {
     }
 
     // Alerta de 90-99%
-    if (current_memory_usage >= max_memory_bytes * 0.9 && current_memory_usage <= max_memory_bytes * 0.99) {
-        fprintf(stdout, "ALERTA: Memoria utilizada no momento (%.2f KB) esta entre 90%% e 99%% do total disponivel (%.2f KB).\n",
-                (double)current_memory_usage / 1024.0, (double)max_memory_bytes / 1024.0);
+    if (current_memory_usage >= (size_t)(max_memory_bytes * 0.9) && current_memory_usage <= (size_t)(max_memory_bytes * 0.99) ) {
+        // Usar stdout para alertas, stderr para erros
+        printf("ALERTA: Memoria utilizada (%.2f KB) entre 90%% e 99%% do total disponivel (%.2f KB).\n",
+               (double)current_memory_usage / 1024.0, (double)max_memory_bytes / 1024.0);
     }
-    // Erro de 100% (embora a verificação no início já deva pegar isso)
-    if (current_memory_usage > max_memory_bytes) { // Double check, a primeira condição deveria pegar
-        fprintf(stderr, "ERRO Memoria Insuficiente: Uso de memoria excedeu o limite apos alocacao.\n");
-        cleanup_memory_manager();
+     // Verificação de estouro de 100% (embora a primeira verificação de limite devesse pegar)
+    if (current_memory_usage > max_memory_bytes) {
+        fprintf(stderr, "ERRO Memoria Insuficiente: Uso de memoria (%zu bytes) excedeu o limite (%zu bytes) apos alocacao.\n", current_memory_usage, max_memory_bytes);
+        report_memory_usage();
         exit(EXIT_FAILURE);
     }
 
@@ -125,165 +129,117 @@ void* managed_realloc(void* ptr, size_t new_size) {
         exit(EXIT_FAILURE);
     }
 
-    if (ptr == NULL) {
-        // Comportamento de realloc(NULL, new_size) é igual a malloc(new_size)
+    if (ptr == NULL) { // realloc(NULL, size) é igual a malloc(size)
         return managed_malloc(new_size);
     }
 
-    int record_index = find_allocation_record(ptr);
-    if (record_index == -1) {
-        fprintf(stderr, "ERRO: Tentativa de realocar ponteiro nao gerenciado ou ja liberado (%p).\n", ptr);
-        // Não podemos saber o que fazer aqui, pode ser um erro crítico.
-        // Considerar finalizar ou retornar NULL e deixar o chamador lidar.
-        // Por segurança, e consistência com as regras, vamos finalizar.
-        cleanup_memory_manager();
-        exit(EXIT_FAILURE);
-    }
-
-    size_t old_size = allocation_records[record_index].size;
-
-    if (new_size == 0) {
-        // Comportamento de realloc(ptr, 0) é igual a free(ptr)
+    if (new_size == 0) { // realloc(ptr, 0) é igual a free(ptr)
         managed_free(ptr);
         return NULL;
     }
 
-    // Verifica se a nova alocação (diferença) excede o limite
+    int record_index = find_allocation_record_index(ptr);
+    if (record_index == -1) {
+        fprintf(stderr, "ERRO: Tentativa de realocar ponteiro %p nao gerenciado ou ja liberado.\n", ptr);
+        // Não podemos continuar com segurança.
+        exit(EXIT_FAILURE);
+    }
+
+    size_t old_size = allocation_records[record_index].size;
     long memory_diff = (long)new_size - (long)old_size;
+
     if (memory_diff > 0 && (current_memory_usage + memory_diff > max_memory_bytes)) {
-        fprintf(stderr, "ERRO Memoria Insuficiente: Tentativa de realocar para %zu bytes excederia o limite.\n", new_size);
-        cleanup_memory_manager();
+        fprintf(stderr, "ERRO Memoria Insuficiente: Tentativa de realocar para %zu bytes (de %zu). Limite maximo de %zu bytes seria excedido.\n", new_size, old_size, max_memory_bytes);
+        report_memory_usage();
         exit(EXIT_FAILURE);
     }
 
     void *new_ptr = realloc(ptr, new_size);
-    if (new_ptr == NULL && new_size > 0) { // realloc pode retornar NULL se new_size for 0 e liberar o bloco
-        fprintf(stderr, "ERRO Memoria Insuficiente: realloc retornou NULL ao tentar realocar para %zu bytes.\n", new_size);
-        // O bloco original (ptr) NÃO é liberado por realloc se falhar e new_size > 0
-        // Não precisamos chamar cleanup_memory_manager aqui necessariamente, pois o estado anterior é mantido.
-        // Contudo, as regras do projeto pedem para finalizar.
-        cleanup_memory_manager();
+    if (new_ptr == NULL) { // new_size > 0, então falha de realloc
+        fprintf(stderr, "ERRO Memoria Insuficiente: realloc retornou NULL ao tentar realocar de %zu para %zu bytes.\n", old_size, new_size);
+        // O bloco original ptr NÃO é liberado por realloc se falhar.
+        // Não chamar cleanup_memory_manager() aqui, pois o estado do bloco original pode ser importante.
+        report_memory_usage();
         exit(EXIT_FAILURE);
     }
 
-    // Atualiza o registro
     allocation_records[record_index].ptr = new_ptr;
     allocation_records[record_index].size = new_size;
 
-    current_memory_usage -= old_size;
-    current_memory_usage += new_size;
-
+    current_memory_usage = current_memory_usage - old_size + new_size;
     if (current_memory_usage > peak_memory_usage) {
         peak_memory_usage = current_memory_usage;
     }
 
-    // Alerta de 90-99%
-    if (current_memory_usage >= max_memory_bytes * 0.9 && current_memory_usage <= max_memory_bytes * 0.99) {
-        fprintf(stdout, "ALERTA: Memoria utilizada no momento (%.2f KB) esta entre 90%% e 99%% do total disponivel (%.2f KB).\n",
-                (double)current_memory_usage / 1024.0, (double)max_memory_bytes / 1024.0);
+    if (current_memory_usage >= (size_t)(max_memory_bytes * 0.9) && current_memory_usage <= (size_t)(max_memory_bytes * 0.99)) {
+        printf("ALERTA: Memoria utilizada (%.2f KB) entre 90%% e 99%% do total disponivel (%.2f KB).\n",
+               (double)current_memory_usage / 1024.0, (double)max_memory_bytes / 1024.0);
     }
-     // Erro de 100% (embora a verificação no início já deva pegar isso)
     if (current_memory_usage > max_memory_bytes) {
-        fprintf(stderr, "ERRO Memoria Insuficiente: Uso de memoria excedeu o limite apos realocacao.\n");
-        cleanup_memory_manager();
+        fprintf(stderr, "ERRO Memoria Insuficiente: Uso de memoria (%zu bytes) excedeu o limite (%zu bytes) apos realocacao.\n", current_memory_usage, max_memory_bytes);
+        report_memory_usage();
         exit(EXIT_FAILURE);
     }
-
     return new_ptr;
 }
 
 void managed_free(void* ptr) {
-    if (ptr == NULL) {
-        return; // free(NULL) é seguro, então podemos simplesmente retornar.
-    }
+    if (ptr == NULL) return; // free(NULL) é seguro
     if (allocation_records == NULL) {
-        // Isso não deveria acontecer se init foi chamado e ptr não é NULL
-        // mas é uma verificação de segurança.
-        fprintf(stderr, "AVISO: managed_free chamado com gerenciador nao inicializado ou apos cleanup para ptr %p.\n", ptr);
-        free(ptr); // Tenta liberar mesmo assim, pois é um ponteiro válido.
+        // fprintf(stderr, "AVISO: managed_free chamado com gerenciador nao inicializado ou apos cleanup para ptr %p.\n", ptr);
+        // Se o gerenciador não está ativo, apenas chama free normal.
+        free(ptr);
         return;
     }
 
-
-    int record_index = find_allocation_record(ptr);
+    int record_index = find_allocation_record_index(ptr);
     if (record_index == -1) {
-        // fprintf(stderr, "AVISO: Tentativa de liberar ponteiro nao gerenciado ou ja liberado (%p).\n", ptr);
-        // De acordo com as regras, erros devem finalizar. No entanto, liberar um ponteiro não rastreado
-        // pode ser um erro de lógica do programa, mas não necessariamente do gerenciador.
-        // Para ser seguro e evitar double free se o usuário chamar free(ptr) e depois managed_free(ptr),
-        // apenas ignoramos se não for rastreado, ou podemos alertar.
-        // Se o ponteiro FOI gerenciado e depois liberado e tentado liberar de novo,
-        // o find_allocation_record falharia.
-        // Por ora, vamos apenas imprimir um aviso e não finalizar, pois o ponteiro pode ser de fora.
-        // Se as regras exigem finalização para QUALQUER erro, isso precisaria mudar.
-        // No entanto, o mais comum é que managed_free só receba ponteiros de managed_alloc.
-        // Se um ponteiro não rastreado é passado, é um bug no código cliente.
-        // fprintf(stderr, "ALERTA: Tentativa de liberar ponteiro nao rastreado: %p\n", ptr);
-        // free(ptr); // Se quisermos tentar liberar mesmo assim. Mas pode ser perigoso.
-        return; // Ignora silenciosamente por enquanto, assumindo que não foi alocado pelo manager.
+        // Tentativa de liberar ponteiro não rastreado. Pode ser um erro no código cliente.
+        // Por segurança, não tentamos liberar para evitar double-free de memória não gerenciada.
+        // fprintf(stderr, "AVISO: Tentativa de liberar ponteiro %p nao rastreado por managed_free.\n", ptr);
+        return;
     }
 
     current_memory_usage -= allocation_records[record_index].size;
     free(allocation_records[record_index].ptr);
 
-    // Remove o registro do array "trocando" com o último e diminuindo o contador
-    // Isso é mais eficiente que deslocar todos os elementos.
-    if (allocation_count > 0) { // Verifica se há elementos para evitar underflow em allocation_count - 1
+    // Remove o registro do array trocando com o último e diminuindo o contador
+    if (allocation_count > 0) { // Segurança extra
         allocation_records[record_index] = allocation_records[allocation_count - 1];
         allocation_count--;
     }
-
-
-    // Opcional: Reduzir a capacidade do array de registros se estiver muito vazio
-    // if (allocation_capacity > INITIAL_ALLOCATION_CAPACITY && allocation_count < allocation_capacity / 4) {
-    //     size_t new_capacity = allocation_capacity / 2;
-    //     if (new_capacity < INITIAL_ALLOCATION_CAPACITY) new_capacity = INITIAL_ALLOCATION_CAPACITY;
-    //     AllocationRecord *new_records = (AllocationRecord *)realloc(allocation_records, new_capacity * sizeof(AllocationRecord));
-    //     if (new_records != NULL) {
-    //         allocation_records = new_records;
-    //         allocation_capacity = new_capacity;
-    //     }
-    // }
+    // Opcional: reduzir a capacidade do array de registros se estiver muito vazio (shrink-to-fit)
 }
 
 void report_memory_usage(void) {
-    printf("========================================\n");
+    printf("\n========================================\n");
     printf("RELATORIO DE USO DE MEMORIA:\n");
-    printf("  Memoria maxima disponivel: %.2f KB\n", (double)max_memory_bytes / 1024.0);
-    printf("  Pico de memoria utilizada: %.2f KB (%.2f %% do maximo)\n",
+    printf("  Limite Maximo de Memoria: %.2f KB\n", (double)max_memory_bytes / 1024.0);
+    printf("  Pico de Memoria Utilizada: %.2f KB (%.2f %% do limite)\n",
            (double)peak_memory_usage / 1024.0,
            max_memory_bytes > 0 ? ((double)peak_memory_usage / (double)max_memory_bytes) * 100.0 : 0.0);
-    printf("  Memoria atualmente em uso: %.2f KB\n", (double)current_memory_usage / 1024.0);
-    printf("  Numero de alocacoes ativas: %zu\n", allocation_count);
+    printf("  Memoria Atualmente em Uso: %.2f KB\n", (double)current_memory_usage / 1024.0);
+    printf("  Numero de Alocacoes Ativas: %zu\n", allocation_count);
     printf("========================================\n");
 }
 
 void cleanup_memory_manager(void) {
-    //printf("Cleaning up memory manager. %zu allocations to free.\n", allocation_count);
-    // É importante iterar de trás para frente se managed_free modificar allocation_count e reordenar.
-    // No entanto, a implementação atual de managed_free que troca com o último é segura.
-    // Mas para ser mais robusto, podemos copiar os ponteiros e depois iterar, ou simplesmente iterar sobre o contador original.
-    size_t count_at_cleanup_start = allocation_count; // Copia o contador
-    for (size_t i = 0; i < count_at_cleanup_start; ++i) {
-        // Como managed_free pode modificar o array, é mais seguro liberar diretamente aqui
-        // e apenas decrementar o current_memory_usage.
-        // No entanto, chamar managed_free(allocation_records[0].ptr) repetidamente também funcionaria
-        // se managed_free lida corretamente com a remoção.
+    //printf("Limpando gerenciador de memoria. %zu alocacoes para liberar.\n", allocation_count);
+    for (size_t i = 0; i < allocation_count; ++i) {
         if (allocation_records[i].ptr != NULL) {
-             //printf("Freeing at cleanup: ptr %p, size %zu\n", allocation_records[i].ptr, allocation_records[i].size);
-            free(allocation_records[i].ptr);
-            allocation_records[i].ptr = NULL; // Evita double free se houver lógica complexa
+            free(allocation_records[i].ptr); // Libera a memória alocada pelo programa
+            allocation_records[i].ptr = NULL;
         }
     }
 
     if (allocation_records != NULL) {
-        free(allocation_records);
+        free(allocation_records); // Libera o array de registros em si
         allocation_records = NULL;
     }
 
     allocation_count = 0;
     allocation_capacity = 0;
     current_memory_usage = 0;
-    // peak_memory_usage é mantido para o relatório final, não resetado aqui.
-    //printf("Memory manager cleaned up.\n");
+    // peak_memory_usage é mantido para o relatório final, não é resetado aqui.
+    // printf("Gerenciador de memoria limpo.\n");
 }

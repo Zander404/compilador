@@ -1,5 +1,0 @@
-_f
-__
-__func_
-__func?
-__ func
