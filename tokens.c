@@ -1,7 +1,6 @@
 #include "tokens.h"
 
-
-const ReservedWord reserved_words[] = {
+const ReservedWordMapping reserved_words[] = {
   {"principal", TK_PRINCIPAL},
   {"funcao", TK_FUNCAO},
   {"retorno", TK_RETORNO},
@@ -10,30 +9,28 @@ const ReservedWord reserved_words[] = {
   {"se", TK_SE},
   {"senao", TK_SENAO},
   {"para", TK_PARA},
-  {"inteiro", TIPO_INTEIRO},
-  {"decimal", TIPO_DECIMAL},
-  {"texto", TIPO_TEXTO}
-
-
+  {"inteiro", TK_TIPO_INTEIRO},
+  {"decimal", TK_TIPO_DECIMAL},
+  {"texto", TK_TIPO_TEXTO}
 };
+const int ACTUAL_NUM_RESERVED_WORDS = sizeof(reserved_words) / sizeof(reserved_words[0]);
 
+const ReservedWordMapping VALID_OPERATORS[] = {
+  {"+", TK_OP_SOMA},
+  {"-", TK_OP_SUBTRACAO},
+  {"*", TK_OP_MULTIPLICACAO},
+  {"/", TK_OP_DIVISAO},
+  {"^", TK_OP_POTENCIA},
+  {"=", TK_OP_ATRIBUICAO},
 
-#define num__of_valid_operators = 12;
-const ReservedWord VALID_OPERATORS[] = {
-  {"+", TK_OPERATOR_SUM},
-  {"-", TK_OPERATOR_MINUS},
-  {"*", TK_OPERATOR_MULT},
-  {"/", TK_OPERATOR_DIV},
-  {"^", TK_OPERATOR_POT},
-  {"=", TK_OPERATOR_EQUAL},
+  {"==", TK_OP_IGUAL},
+  {"<>", TK_OP_DIFERENTE},
+  {"<",  TK_OP_MENOR},
+  {"<=", TK_OP_MENOR_IGUAL},
+  {">",  TK_OP_MAIOR},
+  {">=", TK_OP_MAIOR_IGUAL},
 
-  {"==", TK_OPERATOR_SAME},
-  {"<>", TK_OPERATOR_DIFF },
-  {"<",  TK_OPERATOR_LT },
-  {"<=", TK_OPERATOR_LTE },
-  {">",  TK_OPERATOR_GT },
-  {">=", TK_OPERATOR_GTE },
-
-  {"&&", TK_OPERATOR_AND},
-  {"||", TK_OPERATOR_OR}
+  {"&&", TK_OP_LOGICO_E},
+  {"||", TK_OP_LOGICO_OU}
 };
+const int ACTUAL_NUM_VALID_OPERATORS = sizeof(VALID_OPERATORS) / sizeof(VALID_OPERATORS[0]);

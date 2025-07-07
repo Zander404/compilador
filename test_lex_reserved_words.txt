@@ -1,0 +1,11 @@
+principal
+funcao
+retorno
+leia
+escreva
+se
+senao
+para
+inteiro
+decimal
+texto
