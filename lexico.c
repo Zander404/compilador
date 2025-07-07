@@ -73,17 +73,24 @@ void checkReservedWord(const char* word, int num_line){
 }
 
 
-void checkInteger(const char *word, int num_line){
+void checkNumber(const char *word, int num_line){
   Token token;
+
+  
   token.line = num_line;
 
   strcpy(token.word, word);
-  printf("[INTEGER] %s", token.word);
-  return ;
-}
 
-
-void checkDecimal(){
+  if(strchr(word, PERIOD) != NULL){
+    printf("[DECIMAL] %f \n", atof(token.word));
+    token.type = TIPO_DECIMAL;
+    return;
+  }else{
+    printf("[INTEGER] %d \n", atoi(token.word));
+    token.type = TIPO_INTEIRO;
+    return ;
+  }
+  
 
   return ;
 }
@@ -139,11 +146,11 @@ void checkLine(const char *line, int num_line){
     memset(lexema, 0, sizeof(lexema));
 
     while(isspace(line[i]) || line[i] == OPEN_PAREN || line[i] == CLOSE_PAREN || line[i] == OPEN_BRACE || line[i] == CLOSE_BRACE) { i++;}
-
+    /* printf("%c", line[i]);*/
     /* Verify if is a Variable */
     if (line[i]  == EXCLAMATION) {
 
-      while( line[i] != COMMA && line[i] != '\0' && line[i] != SEMICOLON && line[i] != EQUAL && line[i] != LT && line[i] != GT && line[i] != CLOSE_PAREN){
+      while( line[i] != COMMA && line[i] != PLUS && line[i] != MINUS && line[i] != SPACE && line[i] != '\0' && line[i] != SEMICOLON && line[i] != EQUAL && line[i] != LT && line[i] != GT && line[i] != CLOSE_PAREN && line[i] != OPEN_BRACKET ){
         lexema[k++] = line[i++];
       }
       lexema[k] = '\0';
@@ -158,6 +165,7 @@ void checkLine(const char *line, int num_line){
         lexema[k++] = line[i++];
       }
       checkFunction(lexema, num_line);
+      continue;
 
     }
 
@@ -169,11 +177,15 @@ void checkLine(const char *line, int num_line){
 
       lexema[k] = '\0';
       checkReservedWord(lexema, num_line);
-
+      continue;
     }
 
+    k = 0; 
+    memset(lexema, 0, sizeof(lexema));
+
+
     /* Verify if is a String*/
-    else if(line[i] == DQUOTE){
+    if(line[i] == DQUOTE){
       lexema[k++] = line[i++];
 
       while(line[i] != DQUOTE && line[i] != '\0'){
@@ -183,18 +195,28 @@ void checkLine(const char *line, int num_line){
 
       lexema[k] = '\0';
       checkString(lexema, num_line);
-
+      continue;
     }
-    else if(isdigit(line[i])){
-      while(isdigit(line[i]) || line[i] == PERIOD){
-        lexema[k++] == line[i++];
-      }
 
-      lexema[k] = '\0';
-      checkDecimal(lexema, num_line);
-
-    
+  
+    /* Verify if a Number */
+    else if (isdigit(line[i])){
+      while ( isdigit(line[i]) || line[i] == PERIOD){
+          // Condição para capturar números: dígitos, ou colchetes e ponto se for bracketed
+          if (k < sizeof(lexema) - 1) { // Prevenção de buffer overflow
+              lexema[k++] = line[i++];
+          } else {
+              // Lidar com lexema muito longo, erro ou truncamento
+              fprintf(stderr, "[LINHA] %d | [WARNING] Lexema numérico muito longo, truncado: %s\n", num_line, lexema);
+              break;
+          }
+      
     }
+
+    lexema[k] = '\0';
+    checkNumber(lexema, num_line);
+    continue;
+  }
 
     k = 0; 
     memset(lexema, 0, sizeof(lexema));
@@ -202,16 +224,17 @@ void checkLine(const char *line, int num_line){
 
     /* Check if is operator */
     if ( line [i] == EQUAL ||  line [i] == PLUS ||  line [i] == MINUS ||  line [i] == AMP ||  line [i] == ASTERISK ||  line [i] == CARET ||  line [i] == LT ||  line [i] == GT ||  line [i] == PIPE) {
+      lexema[k++] = line[i++];
       while(!isspace(line[i]) && !isalnum(line[i]) && line[i] != '\0'){
         lexema[k++] = line[i++];
       }
       lexema[k] = '\0';
       checkOperator(lexema, num_line);
-
+      continue;
     }
-
-
     i++;
+
+
   }
 
 }

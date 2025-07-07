@@ -18,11 +18,11 @@ typedef struct {
 
 void checkLine(const char *line, int num_line);
 
-void checkReservedWord();
-void checkVariable();
-void checkInteger();
-void checkDecimal();
-void checkString();
+void checkReservedWord(const char *word, int num_line);
+void checkVariable(const char *word, int num_line);
+void checkInteger(const char *word, int num_line);
+void checkDecimal(const char *word, int num_line);
+void checkString(const char *word, int num_line);
 
 void invalidToken();
 
