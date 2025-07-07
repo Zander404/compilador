@@ -4,6 +4,7 @@
 #include "tokens.h"
 #include "lexico.h"
 #include "memory_manager.h"
+#include "token_list.h"     // Incluído para usar a lista de tokens
 
 static int global_curly_brace_balance = 0;
 static int global_square_bracket_balance = 0;
@@ -15,9 +16,16 @@ int main(void){
   char text_buffer[256];
   int num_line = 1;
   BalanceCounters line_counters;
-  const char* input_filename = "./test_spaces_issue.txt";
+  const char* input_filename = "./test_lex_strings.txt"; // MODIFICADO PARA TESTE de strings
+  TokenList *the_token_list = NULL;
 
   init_memory_manager(0);
+  the_token_list = create_token_list(100);
+  if (the_token_list == NULL) {
+      fprintf(stderr, "Falha ao criar a lista de tokens. Encerrando.\n");
+      cleanup_memory_manager();
+      return 1;
+  }
 
   printf("Processando arquivo: %s\n", input_filename);
   arq = fopen(input_filename, "r");
@@ -26,30 +34,28 @@ int main(void){
     while(fgets(text_buffer, sizeof(text_buffer), arq) != NULL) {
       text_buffer[strcspn(text_buffer, "\n")] = '\0';
 
-      line_counters = checkLine(text_buffer, num_line, global_in_string_literal);
+      line_counters = checkLine(the_token_list, text_buffer, num_line, global_in_string_literal);
 
-      // Atualiza contadores globais COM BASE NOS DELTAS DA LINHA
       global_curly_brace_balance += line_counters.curly_braces;
       global_square_bracket_balance += line_counters.square_brackets;
       global_parenthesis_balance += line_counters.parentheses;
       global_in_string_literal = line_counters.is_inside_string_at_line_end;
 
-      // Verifica desbalanceamento imediato (contador global ficou < 0)
       if (global_parenthesis_balance < 0) {
           fprintf(stderr, "[LINHA %d] ERRO SINTATICO: ')' inesperado ou desbalanceado.\n", num_line);
-          line_counters.error_line = num_line; // Sinaliza para sair
+          line_counters.error_line = num_line;
       } else if (global_curly_brace_balance < 0) {
           fprintf(stderr, "[LINHA %d] ERRO SINTATICO: '}' inesperado ou desbalanceado.\n", num_line);
-          line_counters.error_line = num_line; // Sinaliza para sair
+          line_counters.error_line = num_line;
       } else if (global_square_bracket_balance < 0) {
           fprintf(stderr, "[LINHA %d] ERRO SINTATICO: ']' inesperado ou desbalanceado.\n", num_line);
-          line_counters.error_line = num_line; // Sinaliza para sair
+          line_counters.error_line = num_line;
       }
 
-      // Verifica se checkLine reportou algum outro erro léxico
       if (line_counters.error_line > 0) {
-          // A mensagem de erro específica já foi impressa por checkLine ou pela verificação acima
           fprintf(stderr, "Analise interrompida devido a erro na linha %d.\n", num_line);
+          print_token_list(the_token_list);
+          free_token_list(the_token_list);
           report_memory_usage();
           cleanup_memory_manager();
           return 1;
@@ -59,11 +65,11 @@ int main(void){
     fclose(arq);
   }else{
     fprintf(stderr, "Erro: Arquivo '%s' nao encontrado.\n", input_filename);
+    free_token_list(the_token_list);
     cleanup_memory_manager();
     return 1;
   }
 
-  // Verificações finais de balanceamento global (contadores > 0 ou string não fechada)
   int final_balance_error = 0;
   if (global_curly_brace_balance != 0) {
       fprintf(stderr, "ERRO SINTATICO FINAL: Chaves desbalanceadas ao final do arquivo (saldo: %d).\n", global_curly_brace_balance);
@@ -83,12 +89,18 @@ int main(void){
   }
 
   if (final_balance_error) {
+      print_token_list(the_token_list);
+      free_token_list(the_token_list);
       report_memory_usage();
       cleanup_memory_manager();
       return 1;
   }
 
   printf("Analise lexica e de balanceamento concluida com sucesso para o arquivo %s.\n", input_filename);
+  // Removido o AVISO, pois este arquivo de teste é para casos válidos.
+  print_token_list(the_token_list);
+
+  free_token_list(the_token_list);
   report_memory_usage();
   cleanup_memory_manager();
 

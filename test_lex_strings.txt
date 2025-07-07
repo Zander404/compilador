@@ -1,0 +1,4 @@
+"ola"
+"com espaco"
+""
+"teste com \"aspas\" internas"
