@@ -1,72 +1,85 @@
 #ifndef TOKENS_H
 #define TOKENS_H
 
-// Mantendo as macros originais por enquanto, mas ACTUAL_... são preferíveis
-// #define NUM_RESERVED_WORDS 21 // Esta contagem parece incorreta pela definição em tokens.c
-// #define NUM_VALID_OPERATORS 12; // Ponto e vírgula aqui é um erro de sintaxe para #define
-
 typedef enum {
-    TK_PRINCIPAL,
-    TK_FUNCAO,
-    TK_RETORNO,
-    TK_LEIA,
-    TK_ESCREVA,
-    TK_SE,
-    TK_SENAO,
-    TK_PARA,
+    TK_ERRO = 0,
+    TK_PRINCIPAL,       // Palavra reservada "principal"
+    TK_FUNCAO,          // Palavra reservada "funcao"
+    TK_RETORNO,         // Palavra reservada "retorno"
+    TK_LEIA,            // Palavra reservada "leia"
+    TK_ESCREVA,         // Palavra reservada "escreva"
+    TK_SE,              // Palavra reservada "se"
+    TK_SENAO,           // Palavra reservada "senao"
+    TK_PARA,            // Palavra reservada "para"
 
-    TIPO_INTEIRO,    // Usado como tipo de dado e como TokenType para palavras reservadas
-    TIPO_DECIMAL,
-    TIPO_TEXTO,
+    // Tipos de dados como palavras reservadas (usados em declarações)
+    // Mantendo os nomes originais TIPO_ para consistência com o código legado,
+    // mas TK_TIPO_ seria mais uniforme.
+    TIPO_INTEIRO,       // Palavra reservada "inteiro"
+    TIPO_DECIMAL,       // Palavra reservada "decimal"
+    TIPO_TEXTO,         // Palavra reservada "texto"
 
-    TK_IDENTIFICADOR,
-    TK_VARIAVEL,        // Pode ser útil distinguir de identificador geral
-    TK_OPERATOR,        // Tipo genérico para operadores, tipos específicos abaixo são melhores
-    TK_NUM_INT,         // Para literais inteiros
-    TK_NUM_DEC,         // Para literais decimais
-    TK_STRING,          // Para literais string
+    TK_IDENTIFICADOR,   // Nomes de variáveis e funções definidas pelo usuário
+    TK_VARIAVEL,        // Especificamente para identificar um lexema como variável (ex: !nome)
+                        // Pode ser redundante com TK_IDENTIFICADOR dependendo do uso.
+                        // A tabela de símbolos distinguirá melhor a categoria.
 
-    // Tipos específicos de operadores (preferível sobre TK_OPERATOR genérico)
-    TK_OPERATOR_SUM,
-    TK_OPERATOR_MINUS,
-    TK_OPERATOR_MULT,
-    TK_OPERATOR_DIV,
-    TK_OPERATOR_POT,    // ^ (Potência)
-    TK_OPERATOR_EQUAL,  // = (Atribuição)
+    // Literais
+    TK_LITERAL_INT,     // Ex: 123, 0, 42
+    TK_LITERAL_DEC,     // Ex: 1.0, 0.5, .5, 5.
+    TK_LITERAL_STRING,  // Conteúdo de uma string, ex: "ola mundo" (sem as aspas delimitadoras)
 
-    TK_OPERATOR_SAME,   // == (Comparação Igual)
-    TK_OPERATOR_DIFF,   // <> (Diferente)
-    TK_OPERATOR_LT,     // < (Menor que)
-    TK_OPERATOR_LTE,    // <= (Menor ou Igual que)
-    TK_OPERATOR_GT,     // > (Maior que)
-    TK_OPERATOR_GTE,    // >= (Maior ou Igual que)
+    // Operadores (nomes mais descritivos e prefixados com TK_OP_)
+    TK_OP_ATRIBUICAO,   // =
+    TK_OP_SOMA,         // +
+    TK_OP_SUBTRACAO,    // -
+    TK_OP_MULTIPLICACAO,// *
+    TK_OP_DIVISAO,      // /
+    TK_OP_POTENCIA,     // ^ (Exponenciação)
 
-    TK_OPERATOR_AND,    // && (Lógico E)
-    TK_OPERATOR_OR,     // || (Lógico OU)
+    TK_OP_IGUAL,        // == (Comparação de igualdade)
+    TK_OP_DIFERENTE,    // <>
+    TK_OP_MENOR,        // <
+    TK_OP_MENOR_IGUAL,  // <=
+    TK_OP_MAIOR,        // >
+    TK_OP_MAIOR_IGUAL,  // >=
 
-    TK_DELIM,           // Tipo genérico para delimitadores, se necessário
-    TK_ERRO             // Para tokens de erro
+    TK_OP_LOGICO_E,     // &&
+    TK_OP_LOGICO_OU,    // ||
 
+    // Delimitadores (nomes mais descritivos e prefixados com TK_DELIM_)
+    TK_DELIM_ABRE_PAREN,    // (
+    TK_DELIM_FECHA_PAREN,   // )
+    TK_DELIM_ABRE_COLCH,    // [
+    TK_DELIM_FECHA_COLCH,   // ]
+    TK_DELIM_ABRE_CHAVES,   // {
+    TK_DELIM_FECHA_CHAVES,  // }
+    TK_DELIM_PONTO_VIRGULA, // ;
+    TK_DELIM_VIRGULA,       // ,
+    TK_DELIM_PONTO,         // . (Pode ser usado em números decimais, ou como delimitador em outros contextos - raro)
+    TK_DELIM_ASPAS_DUPLAS,  // " (Para marcar início/fim de string literal)
+
+    TK_EOF              // Marcador de Fim de Arquivo (End Of File)
 } TokenType;
 
 typedef struct {
   TokenType type;
-  char *word; // O lexema do token (alocado dinamicamente)
+  char *word;     // O lexema do token (alocado dinamicamente)
   int line;
 } Token;
 
-// Estrutura para mapear strings de palavras reservadas/operadores a seus tipos
 typedef struct {
   const char* word;
   TokenType type;
-} ReservedWordMapping; // Nome mais genérico, já que é usado para operadores também
+} ReservedWordMapping;
 
-// Declarações externas dos arrays definidos em tokens.c
 extern const ReservedWordMapping reserved_words[];
 extern const ReservedWordMapping VALID_OPERATORS[];
 
-// Declarações externas das constantes de tamanho real (definidas em tokens.c)
 extern const int ACTUAL_NUM_RESERVED_WORDS;
 extern const int ACTUAL_NUM_VALID_OPERATORS;
+
+// Declaração da função para converter TokenType em string
+const char* token_type_to_string(TokenType type);
 
 #endif // TOKENS_H
