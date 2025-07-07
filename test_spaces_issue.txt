@@ -1,0 +1,20 @@
+funcao __media(!e, !aa){
+  inteiro !media = 0;
+  !media = (!e + !aa);
+  retorno !media;
+}
+
+principal(){
+ inteiro !a, !b1 = 7;
+ decimal !cc[1.5];
+ inteiro !d;
+ !b1 => !a;
+ escreva("Escreva um número ");
+ leia (!a);
+ se (!a <= !b1)
+ escreva("A é maior", !a);
+ senao escreva("B é maior", !b);
+ para (!d = 0; !d<=100; !d = !d+2){
+ escreva("D", !d);
+ }
+}
