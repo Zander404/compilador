@@ -1,6 +1,7 @@
 #include "tokens.h"
 
 
+#define num_of_valid_reserved_words = 11
 const ReservedWord reserved_words[] = {
   {"principal", TK_PRINCIPAL},
   {"funcao", TK_FUNCAO},
@@ -18,7 +19,7 @@ const ReservedWord reserved_words[] = {
 };
 
 
-#define num__of_valid_operators = 12;
+#define num__of_valid_operators = 12
 const ReservedWord VALID_OPERATORS[] = {
   {"+", TK_OPERATOR_SUM},
   {"-", TK_OPERATOR_MINUS},

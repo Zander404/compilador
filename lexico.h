@@ -4,26 +4,26 @@
 #include "tokens.h"
 
 typedef struct {
-  char *text;
-  size_t lenght;
-} Line;
+    Token **tokens;
+    size_t count;   
+    size_t capacity; 
+} TokenList;
 
+TokenList* create_token_list();
+void add_token_to_list(TokenList *list, Token *token);
+void destroy_token_list(TokenList *list);
+void print_token_list(TokenList *list);
 
-typedef struct {
-  Line *lines;
-  int num_lines;
-  
-} SourceCode;
+void checkLine(const char *line, int num_line, TokenList *list);
 
+int checkPrincipal(const char* line, int num_line);
 
-void checkLine(const char *line, int num_line);
-
-void checkReservedWord(const char *word, int num_line);
-void checkVariable(const char *word, int num_line);
-void checkInteger(const char *word, int num_line);
-void checkDecimal(const char *word, int num_line);
-void checkString(const char *word, int num_line);
-
+void checkVariable(const char* word, int num_line, TokenList *list);
+void checkFunction(const char* word, int num_line, TokenList *list);
+void checkReservedWord(const char* word, int num_line, TokenList *list);
+void checkNumber(const char *word, int num_line, TokenList *list);
+void checkString(const char *word, int num_line, TokenList *list);
+void checkOperator(const char *word, int num_line, TokenList *list);
 void invalidToken();
 
 

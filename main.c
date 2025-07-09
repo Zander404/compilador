@@ -3,27 +3,81 @@
 #include <string.h>
 #include "tokens.h"
 #include "lexico.h"
-
-void main(){
-  FILE *arq;
-  char text[100];
-  arq = fopen("./programa1.txt", "r");
-  char palavra[100];
-  int num_line = 1;
-  int hasPrincipalFunction = 0;
-
-  if (arq != NULL){
-    while(fgets(text, sizeof(text), arq) != NULL) {
-      text[strcspn(text, "\n")] = '\0';
-      checkLine(text, num_line);
-      num_line++;
-    }
-    fclose(arq);
+#include "memory_controller.h"
 
 
-  }else{
-    printf("File Don't find");
+int main(){
+  char* memory_buffer = NULL;
+  TokenList *token_list = NULL;
+  
+  memory_buffer = (char*)malloc(MEMORY_SIZE);
+  if(memory_buffer == NULL){
+    perror("Erro ao alocar 2MB de memória");
+    return EXIT_FAILURE;
   }
 
-  return;
+
+  printf("Memória de %d MB alocada com sucesso. \n", MEMORY_SIZE / (1024 * 1024));
+  
+  if(load_file_to_memory("./programa1.txt", memory_buffer, MEMORY_SIZE) == NULL){
+    FREE(memory_buffer);
+    return EXIT_FAILURE;
+  }
+  printf("Arquivo 'programa1.txt' carragando para a pseudo memória .\n");
+
+  token_list = create_token_list();
+  if(token_list == NULL){
+    FREE(memory_buffer);
+    return EXIT_FAILURE;
+  }
+  printf("Lista de Tokens criado com sucesso. \n");
+
+
+  char *current_pos = memory_buffer;
+  int current_line_num = 1;
+
+  while (*current_pos != '\0') {
+    char *new_line_pos = strchr(current_pos, '\n');
+    size_t line_length;
+    char temp_line_buffer[256];
+
+    if(new_line_pos != NULL){
+      line_length = new_line_pos - current_pos;
+    }else {
+      line_length = strlen(current_pos);
+    }
+    
+    if(line_length >= sizeof(temp_line_buffer)){
+      fprintf(stderr, "AVISO: Linha %d muito longa, truncado para 255 caracteres. \n", current_line_num);
+      line_length = sizeof(temp_line_buffer) - 1;
+    }
+    strncpy(temp_line_buffer, current_pos, line_length);
+    temp_line_buffer[line_length] = '\0';
+
+    checkLine(temp_line_buffer, current_line_num, token_list );
+  
+    current_line_num++;
+
+    if(new_line_pos != NULL){
+      current_pos = new_line_pos + 1;
+    } else {
+      current_pos += line_length;
+    }
+  }
+
+  print_token_list(token_list);
+
+  if(memory_buffer != NULL){
+    FREE(memory_buffer);
+    printf("Memória Liberada. \n");
+  }
+
+  if (token_list != NULL){
+    destroy_token_list(token_list);
+    printf("Lista de Tokens Liberada. \n");
+  }
+
+  print_memory_report();
+  return EXIT_SUCCESS;
+
 }

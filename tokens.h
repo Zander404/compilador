@@ -1,6 +1,6 @@
 
-#define NUM_RESERVED_WORDS 21
-#define NUM_VALID_OPERATORS 12;
+#define NUM_RESERVED_WORDS 11
+#define NUM_VALID_OPERATORS 12
 
 
 #ifndef TOKENS_H
@@ -50,15 +50,18 @@ typedef enum {
     TK_OPERATOR_OR,
 
     TK_DELIM,
-    TK_ERRO
+    TK_ERROR
 
 } TokenType;
 
 typedef struct {
-  TokenType type;
-  char *word;
-  int line;
-
+    TokenType type;
+    char *word;
+    int line;
+    union {
+        long int_val;
+        double dec_val;
+    } value;
 } Token;
 
 typedef struct {
