@@ -4,7 +4,7 @@ funcao __media(!e, !aa){
   retorno !media;
 }
 
-principal(((){
+principal(){
  inteiro !a, !b1 = 7;
  decimal !cc[1.5];
  inteiro !d;
