@@ -3,12 +3,14 @@
 #include <string.h>
 #include "tokens.h"
 #include "lexico.h"
+#include "parser.h"
 #include "memory_controller.h"
 
 
 int main(){
   char* memory_buffer = NULL;
   TokenList *token_list = NULL;
+  int balance_status = 0; /* To store the result of the balance check */
   
   memory_buffer = (char*)malloc(MEMORY_SIZE);
   if(memory_buffer == NULL){
@@ -23,7 +25,7 @@ int main(){
     FREE(memory_buffer);
     return EXIT_FAILURE;
   }
-  printf("Arquivo 'programa1.txt' carragando para a pseudo memória .\n");
+  printf("Arquivo 'programa1.txt' carregando para a memória .\n");
 
   token_list = create_token_list();
   if(token_list == NULL){
@@ -64,20 +66,21 @@ int main(){
       current_pos += line_length;
     }
   }
+    /* --- NEW: Perform Symbol Balancing Check --- */
+    printf("\n--- Verificando Balanceamento de Símbolos ---\n");
+    balance_status = check_all_symbols_balance(token_list);
+    if (balance_status) {
+        printf("Balanceamento de símbolos: OK.\n");
+    } else {
+        printf("Balanceamento de símbolos: ERRO ENCONTRADO.\n");
+    }
+    printf("-----------------------------------------\n");
 
-  print_token_list(token_list);
 
-  if(memory_buffer != NULL){
-    FREE(memory_buffer);
-    printf("Memória Liberada. \n");
-  }
+    if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
+    if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
+    print_memory_report();
 
-  if (token_list != NULL){
-    destroy_token_list(token_list);
-    printf("Lista de Tokens Liberada. \n");
-  }
-
-  print_memory_report();
-  return EXIT_SUCCESS;
-
+    /* Return success only if everything went well, including balance */
+    return balance_status ? EXIT_SUCCESS : EXIT_FAILURE;
 }
