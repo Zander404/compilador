@@ -4,13 +4,13 @@
 
 #include "memory_controller.h"
 
-
+/* Arquivo para lidar com o PSEUDO Controle de Memrória */
 size_t total_allocated_memory  = 0;
 size_t total_freed_memory = 0;
 size_t current_memory_in_use =0;
 size_t max_memory_in_use = 0;
 
-
+/* Implementar a estrutura de alocação de memória própria */
 void* my_malloc(size_t size, const char* file, int line) {
     void* ptr = malloc(size);
     if (ptr != NULL) {
@@ -26,12 +26,14 @@ void* my_malloc(size_t size, const char* file, int line) {
     return ptr;
 }
 
+/* Implementação para liberar memória, a qual não está sendo usada */
 void my_free(void* ptr, const char* file, int line) {
     if (ptr != NULL) {
         free(ptr);
     }
 }
 
+/* Copiar Dado para a memória */
 char* my_strdup(const char* s, const char* file, int line) {
     if (s == NULL) return NULL;
     size_t len = strlen(s) + 1;
@@ -43,6 +45,7 @@ char* my_strdup(const char* s, const char* file, int line) {
     return new_s;
 }
 
+/* Printar o USO de memória no terminal */
 void print_memory_report() {
     printf("\n--- Relatório de Uso de Memória ---\n");
     printf("Memória Total Alocada (Acumulada): %zu bytes (%.2f KB)  %.2f\%\n",
@@ -53,13 +56,14 @@ void print_memory_report() {
 }
 
 
-
+/* Levar o arquivo do 'PROGRAMA' para a memória */
 char* load_file_to_memory(const char* filename, char* buffer, size_t buffer_size){
   FILE* file = NULL;
   long file_size = 0;
 
   file = fopen(filename, "rb");
-
+  
+  /* Validar seu o arquivo existe */
   if(file == NULL){
     perror("Erro ao abrir o arquivo do programa");
     return NULL;
@@ -70,19 +74,22 @@ char* load_file_to_memory(const char* filename, char* buffer, size_t buffer_size
 
   rewind(file);
 
+  /* Verificar se o arquivo está vazio */
   if(file_size == -1L){
     perror("Erro ao obter o tamanho do arquivo");
     fclose(file);
     return NULL;
   }
 
-
+  
+  /* Verificar se o arquivo pode ser armazenado na memória */
   if((size_t)file_size >= buffer_size){
-    fprintf(stderr, "Erro: Arquivo '%s' (tamanho %ld bytes) excede a pseudo mémoria disponível (%zu bytes). \n", filename, file_size, buffer_size);
+    fprintf(stderr, "Erro: Arquivo '%s' (tamanho %ld bytes) excede a memória disponível (%zu bytes). \n", filename, file_size, buffer_size);
     fclose(file);
     return NULL;
   }
 
+  /* */
   size_t bytes_read = fread(buffer, 1, file_size, file);
   if(bytes_read != (size_t)file_size){
     perror("Erro ao ler o arquivo do programa completamente");

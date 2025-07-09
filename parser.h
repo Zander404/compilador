@@ -4,14 +4,15 @@
 #include <stddef.h>
 #include "tokens.h" 
 #include "lexico.h"
-/* Define the stack structure */
-typedef struct {
-    char* data;     /* Array to store stack elements (characters or TokenType values) */
-    int top;        /* Index of the top element (-1 for empty) */
-    int capacity;   /* Current allocated capacity of the stack */
-} CharStack; /* Or TokenTypeStack if you push TokenTypes */
 
-/* Function prototypes for stack operations */
+/* Definir a estrura para armazenar o "PROGRAMA" na memória */
+typedef struct {
+    char* data;    /* Vetor para armazenar os dados TOKEN na memória*/
+    int top;       /* Indentificador de TOPO de pilha */
+    int capacity;  /* Atual capacidade da pilha */
+} CharStack;
+
+/* Funções para controle de Pilha */
 CharStack* stack_create();
 void stack_destroy(CharStack* stack);
 void stack_push(CharStack* stack, char item);
@@ -19,7 +20,7 @@ char stack_pop(CharStack* stack);
 char stack_peek(CharStack* stack);
 int stack_is_empty(CharStack* stack);
 
-/* Main function for symbol balancing check */
+/* Declaração para Validar Duplo Balanceamento */ 
 int check_all_symbols_balance(TokenList* token_list);
 
-#endif /* PARSER_UTILS_H */
+#endif

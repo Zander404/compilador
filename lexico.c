@@ -1,24 +1,24 @@
-#include <stdio.h>    /* For printf, fprintf, stderr, perror, NULL */
-#include <stdlib.h>   /* For malloc, free, strtol, strtod, atoi, atof, exit */
-#include <ctype.h>    /* For isspace, isalpha, isalnum, isdigit, ispunct */
-#include <string.h>   /* For strlen, strcpy, strcspn, strchr, memset */
-#include <errno.h>    /* For errno, ERANGE */
-#include <limits.h>   /* For LONG_MAX, LONG_MIN */
-#include <float.h>    /* For HUGE_VAL */
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <string.h>
+#include <errno.h> 
+#include <limits.h>
+#include <float.h>
 
-/* Include your project-specific headers */
-#include "memory_controller.h" /* For MALLOC, FREE, STRDUP */
-#include "lexico.h"            /* For TokenList, Token, and prototypes */
-#include "ascii_table.h"       /* For character constants */
-#include "tokens.h"            /* For Token struct, TokenType enum, ReservedWord struct, etc. */
+
+#include "memory_controller.h"
+#include "lexico.h"
+#include "ascii_table.h"
+#include "tokens.h"
 
 /* External declarations from tokens.c */
 extern const ReservedWord reserved_words[];
 extern const ReservedWord VALID_OPERATORS[];
-/* The #define's for NUM_RESERVED_WORDS and NUM_VALID_OPERATORS should be in tokens.h. */
 
-/* Helper function to convert TokenType enum to its string representation */
-/* This function must be defined here or in a .c file and prototyped in its .h */
+
+
+/* Converter o TOKEN para sua Representação em String */
 static const char* token_type_to_string_name(TokenType type) {
     switch (type) {
         case TK_PRINCIPAL: return "TK_PRINCIPAL";
@@ -58,24 +58,8 @@ static const char* token_type_to_string_name(TokenType type) {
     }
 }
 
-/* Helper function to safely free the dynamically allocated 'word' member
- * of a locally created Token struct.
- * NOTE: This function is not used for tokens added to TokenList, as TokenList
- * manages their freeing. It would be for ephemeral tokens not stored.
- * I'm removing its direct use from here as tokens are now persistent.
- */
-/*
-static void free_local_token_word(Token *t) {
-    if (t != NULL && t->word != NULL) {
-        FREE(t->word);
-        t->word = NULL;
-    }
-}
-*/
 
-/* --- TokenList Management Functions --- */
-
-/* Creates and initializes a new TokenList */
+/* --- Funções para Lidar com a Pilha de TOKEN_LIST --- */
 TokenList* create_token_list() {
     TokenList *list = (TokenList*)MALLOC(sizeof(TokenList));
     if (list == NULL) {
@@ -83,7 +67,7 @@ TokenList* create_token_list() {
         return NULL;
     }
     list->count = 0;
-    list->capacity = 10; /* Initial capacity, will grow dynamically */
+    list->capacity = 10;
     list->tokens = (Token**)MALLOC(sizeof(Token*) * list->capacity);
     if (list->tokens == NULL) {
         perror("Erro ao alocar array de tokens na lista");
@@ -93,46 +77,45 @@ TokenList* create_token_list() {
     return list;
 }
 
-/* Adds a Token to the TokenList, reallocating if necessary */
+
 void add_token_to_list(TokenList *list, Token *token) {
     if (list == NULL || token == NULL) return;
 
-    /* Resize the array if capacity is reached */
     if (list->count == list->capacity) {
-        list->capacity *= 2; /* Double the capacity */
-        /* Use realloc (which you defined in memory_controller.h to use MALLOC internally if needed) */
+        list->capacity *= 2;
+
         Token **new_tokens = (Token**)realloc(list->tokens, sizeof(Token*) * list->capacity);
         if (new_tokens == NULL) {
             perror("Erro ao realocar lista de tokens");
-            /* Handle fatal error: cannot add token, memory full. */
-            FREE(token->word); /* Free token's word before losing it */
-            FREE(token);       /* Free token itself */
+
+            FREE(token->word);
+            FREE(token);
             return;
         }
         list->tokens = new_tokens;
     }
 
-    list->tokens[list->count++] = token; /* Add token and increment count */
+    list->tokens[list->count++] = token;
 }
 
-/* Frees all memory associated with the TokenList and its Tokens */
+
 void destroy_token_list(TokenList *list) {
-    size_t i; /* Declared at beginning of block for C90 */
+    size_t i;
     if (list == NULL) return;
 
     for (i = 0; i < list->count; i++) {
         if (list->tokens[i] != NULL) {
-            FREE(list->tokens[i]->word); /* Free the lexeme string */
-            FREE(list->tokens[i]);       /* Free the Token struct itself */
+            FREE(list->tokens[i]->word);
+            FREE(list->tokens[i]);
         }
     }
-    FREE(list->tokens); /* Free the array of pointers */
-    FREE(list);         /* Free the TokenList struct */
+    FREE(list->tokens);
+    FREE(list);
 }
 
-/* Prints the contents of the TokenList (for debugging) */
+/* Imprimir a Tabela de TOKENS (Todos os elementos reconhecido dado a regras) */
 void print_token_list(TokenList *list) {
-    size_t i; /* Declared at beginning of block for C90 */
+    size_t i;
     if (list == NULL) {
         printf("Lista de tokens vazia ou nula.\n");
         return;
@@ -144,10 +127,10 @@ void print_token_list(TokenList *list) {
             printf("[%3zu] <NULL TOKEN>\n", i);
             continue;
         }
-        /* CORRECTED LINE: Using token_type_to_string_name for type name */
+       
         printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string_name(t->type), t->word);
         
-        /* Print value union on the same line if possible, or indented */
+       
         if (t->type == TK_NUM_INT) {
             printf(" (Valor Inteiro: %ld)", t->value.int_val);
         } else if (t->type == TK_NUM_DEC) {
@@ -158,9 +141,9 @@ void print_token_list(TokenList *list) {
     printf("-------------------------------------------\n");
 }
 
-/* --- Check Functions (Modified to Create and Add Tokens) --- */
 
-/* Helper to create a Token* on the heap */
+
+/* Criar Token para coloca na Tabela de TokenList */
 static Token* create_new_token(TokenType type, const char* word, int num_line) {
     Token *token = (Token*)MALLOC(sizeof(Token));
     if (token == NULL) {
@@ -175,50 +158,33 @@ static Token* create_new_token(TokenType type, const char* word, int num_line) {
         FREE(token);
         return NULL;
     }
-    /* Initialize value union to zero for safety */
-    token->value.int_val = 0; /* Set a default for unused union members */
+   
+    token->value.int_val = 0;
     return token;
 }
 
-/* Checks parenthesis balance for a "principal" function */
-int checkPrincipal(const char* line, int num_line){
-    int i = 0;
-    int opened = 0;
-
-    while(line[i] != '\0'){
-        if(line[i] == OPEN_PAREN){
-            opened ++;
-        }else if(line[i] == CLOSE_PAREN){
-            opened --;
-        }
-        i++;
-    }
-
-    if(opened == 0){
-        return 1; /* Balanced */
-    }
-
-    fprintf(stderr, "[LINHA] %d | [ERROR] Funcao 'PRINCIPAL' MAL FORMULADA (parenteses desbalanceados)\n", num_line);
-    return -1; /* Unbalanced */
-}
-
+/* Verificar Variavel */
 void checkVariable(const char* word, int num_line, TokenList *list){
     Token *token = create_new_token(TK_VARIAVEL, word, num_line);
     if (token == NULL) return;
     add_token_to_list(list, token);
 }
 
+
+/* Verificar Função */
 void checkFunction(const char* word, int num_line, TokenList *list){
     Token *token = create_new_token(TK_FUNCAO, word, num_line);
     if (token == NULL) return;
     add_token_to_list(list, token);
 }
 
+
+/* Verificar Palavra Reservada */ 
 void checkReservedWord(const char* word, int num_line, TokenList *list){
     Token *token = NULL;
     int i;
-    TokenType found_type = TK_ERROR; /* Default */
-    for(i = 0; i < 11; i++){
+    TokenType found_type = TK_ERROR;
+    for(i = 0; i < NUM_RESERVED_WORDS; i++){
         if (strcmp(reserved_words[i].word, word) == 0){
             found_type = reserved_words[i].type;
             break;
@@ -235,15 +201,17 @@ void checkReservedWord(const char* word, int num_line, TokenList *list){
     add_token_to_list(list, token);
 }
 
+
+/*Verificar Numero */
 void checkNumber(const char *word, int num_line, TokenList *list){
-    Token *token = (Token*)MALLOC(sizeof(Token)); /* Allocate the Token struct */
+    Token *token = (Token*)MALLOC(sizeof(Token));
     if (token == NULL) {
         perror("Erro ao alocar token para numero");
         return;
     }
     token->line = num_line;
-    token->type = TK_ERROR; /* Assume error until validated */
-    token->word = STRDUP(word); /* Allocate and copy the word */
+    token->type = TK_ERROR;
+    token->word = STRDUP(word);
     if (token->word == NULL) {
         perror("Erro ao alocar word para token de numero");
         FREE(token);
@@ -264,7 +232,7 @@ void checkNumber(const char *word, int num_line, TokenList *list){
 
         } else {
             token->type = TK_NUM_DEC;
-            token->value.dec_val = dec_value; /* Store converted value */
+            token->value.dec_val = dec_value;
         }
     } else {
         long int_value;
@@ -279,11 +247,10 @@ void checkNumber(const char *word, int num_line, TokenList *list){
           
         } else {
             token->type = TK_NUM_INT;
-            token->value.int_val = int_value; /* Store converted value */
+            token->value.int_val = int_value; 
         }
     }
 
-    /* Only add valid tokens to the list. If TK_ERROR, free it immediately. */
     if (token->type != TK_ERROR) {
         add_token_to_list(list, token);
     } else {
@@ -304,7 +271,7 @@ void checkString(const char *word, int num_line, TokenList *list){
 void checkOperator(const char *word, int num_line, TokenList *list){
     Token *token = NULL;
     int i;
-    TokenType found_type = TK_ERROR; /* Default */
+    TokenType found_type = TK_ERROR;
 
     for(i = 0; i < NUM_VALID_OPERATORS; i++){
         if(strcmp(VALID_OPERATORS[i].word, word) == 0){
@@ -326,22 +293,33 @@ void checkOperator(const char *word, int num_line, TokenList *list){
     }
 }
 
-/* Main function to check and tokenize a single line of code, adding tokens to list */
+/*
+ * Validador da LINHA (FUNÇÂO PRINCIPAL desse arquivo)
+ * A analise da Linha para definir se o Token é Valido e atribuir seu tipo (FUNÇÂO, VARIAVEL, OPERADOR, TEXTO, INTEIRO e DECIMAL)
+ * */ 
 void checkLine(const char *line, int num_line, TokenList *list){
     int i = 0;
     int k = 0;
     char lexema[100];
 
     while(line[i] != '\0'){
+
+       /* Limpar o vetor de lexema para a próxima analise de TOKEN */
         k = 0;
         memset(lexema, 0, sizeof(lexema));
 
+        /* Caso o Simbolo atual for um espaço, ir para o próximo caracter */
         while(isspace(line[i])) {
             i++;
         }
-
+        
+        /* Caso for o Simbolo de fim de linha sair do while e esperar a próxima linha para ser processada */
         if (line[i] == '\0') break;
 
+        /* Caso, for algum desses simbolos apenas Criar um TOKEN para a lista, para analise futura pelo
+         *Duplo balancemento
+         * 
+         */
         if (line[i] == OPEN_PAREN || line[i] == CLOSE_PAREN ||
             line[i] == OPEN_BRACE || line[i] == CLOSE_BRACE ||
             line[i] == COMMA || line[i] == SEMICOLON ||
@@ -356,9 +334,9 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* --- Step 3: Other Token Recognition Logic (as per your existing code) --- */
 
-        /* Verify if is a Variable (starts with '!') */
+
+        /* Encontroy uma '!', Indicio de ser uma Variável */
         if (line[i] == EXCLAMATION) {
             if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; }
             while(line[i] != '\0' && (isalnum(line[i]) || line[i] == '_') ) {
@@ -369,7 +347,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* Verify if a Function (starts with '__') */
+        /* Achou um '__' indica o inicio de uma FUNÇÂO */
         else if(line[i] == '_' && line[i+1] == '_'){
             if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
@@ -381,7 +359,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* Verify if is a ReservedWord or Identifier (starts with letter) */
+        /* Começou com caracter Alphanumerico (a,b,c,d,e,...), indica que é uma PALAVRA RESERVADA*/
         else if(isalpha(line[i])){
             while(line[i] != '\0' && isalnum(line[i])){
                 if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
@@ -391,7 +369,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* Verify if is a String (starts with DQUOTE) */
+        /* Começa com ' " ' (Double QUOTE), indica que é inicio de uma STRING */
         else if(line[i] == DQUOTE){
             if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             while(line[i] != '\0' && line[i] != DQUOTE){
@@ -408,7 +386,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* Verify if a Number (starts with digit) */
+        /* Se começar com um DIGITO (1, 2, 3) ou (1.1, 2.1, 3.3), indica que é um DECIMAL ou INTEIRO */
         else if (isdigit(line[i])){
             int has_period = 0;
             while (line[i] != '\0' && (isdigit(line[i]) || (line[i] == PERIOD && !has_period))){
@@ -420,7 +398,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             continue;
         }
 
-        /* Check if is operator */
+        /* Qualquer tipo de operador matemático, Verificar se é um operador valido */
         if ( line [i] == EQUAL ||  line [i] == PLUS ||  line [i] == MINUS ||  line [i] == AMP ||  line [i] == ASTERISK ||  line [i] == CARET ||  line [i] == LT ||  line [i] == GT ||  line [i] == PIPE) {
           lexema[k++] = line[i++];
           while(!isspace(line[i]) && !isalnum(line[i]) && line[i] != '\0'){
@@ -433,7 +411,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
 
 
-        /* --- Unrecognized Character / Error Handling --- */
+        /* --- Se for um caracter não valido ou desconhecido, emitir erro --- */
         fprintf(stderr, "[LINHA] %d | [ERROR] Caractere ou inicio de token nao reconhecido: '%c' (ASCII: %d)\n", num_line, line[i], line[i]);
         exit(1);
     }

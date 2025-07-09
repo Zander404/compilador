@@ -10,8 +10,9 @@
 int main(){
   char* memory_buffer = NULL;
   TokenList *token_list = NULL;
-  int balance_status = 0; /* To store the result of the balance check */
+  int balance_status = 0; 
   
+  /* Alocar um vetor de memoria com o tamanho da nossa memoria definida em memory_controller.h */
   memory_buffer = (char*)malloc(MEMORY_SIZE);
   if(memory_buffer == NULL){
     perror("Erro ao alocar 2MB de memória");
@@ -21,12 +22,15 @@ int main(){
 
   printf("Memória de %d MB alocada com sucesso. \n", MEMORY_SIZE / (1024 * 1024));
   
+  /* Carregar o programa para a memoria */
   if(load_file_to_memory("./programa1.txt", memory_buffer, MEMORY_SIZE) == NULL){
     FREE(memory_buffer);
     return EXIT_FAILURE;
   }
   printf("Arquivo 'programa1.txt' carregando para a memória .\n");
 
+
+  /* Criar a Tabela de Token */
   token_list = create_token_list();
   if(token_list == NULL){
     FREE(memory_buffer);
@@ -37,7 +41,8 @@ int main(){
 
   char *current_pos = memory_buffer;
   int current_line_num = 1;
-
+  
+  /* Ler Linha a Linha e fazer a analise dos tokens */
   while (*current_pos != '\0') {
     char *new_line_pos = strchr(current_pos, '\n');
     size_t line_length;
@@ -66,21 +71,22 @@ int main(){
       current_pos += line_length;
     }
   }
-    /* --- NEW: Perform Symbol Balancing Check --- */
-    printf("\n--- Verificando Balanceamento de Símbolos ---\n");
-    balance_status = check_all_symbols_balance(token_list);
-    if (balance_status) {
-        printf("Balanceamento de símbolos: OK.\n");
-    } else {
-        printf("Balanceamento de símbolos: ERRO ENCONTRADO.\n");
-    }
-    printf("-----------------------------------------\n");
 
+  /* Analisar se o Programa está com os Delimitadores '()', '[]', '{}', estão balanceados */
+  printf("\n--- Verificando Balanceamento de Símbolos ---\n");
+  balance_status = check_all_symbols_balance(token_list);
+  if (balance_status) {
+    printf("Balanceamento de símbolos: OK.\n");
+  } else {
+    printf("Balanceamento de símbolos: ERRO ENCONTRADO.\n");
+  }
+  printf("-----------------------------------------\n");
 
-    if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
-    if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
-    print_memory_report();
+  /*Liberar a Memória, quando a execução terminar */ 
+  if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
+  if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
+  print_memory_report();
 
-    /* Return success only if everything went well, including balance */
-    return balance_status ? EXIT_SUCCESS : EXIT_FAILURE;
+  /* Se o tudo correto e balanceado emitir sinal de SUCESSO */
+  return balance_status ? EXIT_SUCCESS : EXIT_FAILURE;
 }

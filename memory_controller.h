@@ -4,12 +4,14 @@
 #include <stddef.h>
 #include <stdio.h>
 
+/* Definir o Tamanho da Memoria (2048 Kb) */
 #define MEMORY_SIZE ( 2 * 1024 * 1024)
 
 
 extern size_t total_allocated_memory;
 extern size_t total_freed_memory;
 
+/* Definir a estrutura própria para o armazenamento das informações em nossa memória */
 void* my_malloc(size_t size, const char* file, int line);
 void my_free(void* ptr, const char* file, int line);
 char* my_strdup(const char* s, const char* file, int line);

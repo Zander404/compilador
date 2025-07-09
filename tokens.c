@@ -1,7 +1,6 @@
 #include "tokens.h"
 
-
-#define num_of_valid_reserved_words = 11
+/* Definir as palavras reservadas para validação */
 const ReservedWord reserved_words[] = {
   {"principal", TK_PRINCIPAL},
   {"funcao", TK_FUNCAO},
@@ -14,12 +13,9 @@ const ReservedWord reserved_words[] = {
   {"inteiro", TIPO_INTEIRO},
   {"decimal", TIPO_DECIMAL},
   {"texto", TIPO_TEXTO}
-
-
 };
 
-
-#define num__of_valid_operators = 12
+/* Definir Operadores Validos para validação */
 const ReservedWord VALID_OPERATORS[] = {
   {"+", TK_OPERATOR_SUM},
   {"-", TK_OPERATOR_MINUS},
@@ -28,6 +24,10 @@ const ReservedWord VALID_OPERATORS[] = {
   {"^", TK_OPERATOR_POT},
   {"=", TK_OPERATOR_EQUAL},
 
+  {"++", TK_OPERATOR_MORE},
+  {"--", TK_OPERATOR_LESS},
+
+  
   {"==", TK_OPERATOR_SAME},
   {"<>", TK_OPERATOR_DIFF },
   {"<",  TK_OPERATOR_LT },
