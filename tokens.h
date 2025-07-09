@@ -1,12 +1,18 @@
-
-#define NUM_RESERVED_WORDS 21
-#define NUM_VALID_OPERATORS 12;
-
-
 #ifndef TOKENS_H
 #define TOKENS_H
 
+#include <stddef.h>
+
+#define NUM_RESERVED_WORDS 11
+#define NUM_VALID_OPERATORS 14
+
+
+
 typedef enum {
+    TK_UNKNOWN = 0,
+    TK_ERROR,     
+
+   
     TK_PRINCIPAL,
     TK_FUNCAO,
     TK_RETORNO,
@@ -16,17 +22,21 @@ typedef enum {
     TK_SENAO,
     TK_PARA,
 
+   
     TIPO_INTEIRO,
     TIPO_DECIMAL,
     TIPO_TEXTO,
 
+    
     TK_IDENTIFICADOR,
     TK_VARIAVEL,
-    TK_OPERATOR,
+
+    
     TK_NUM_INT,
     TK_NUM_DEC,
     TK_STRING,
 
+    
     TK_OPERATOR_SUM,
     TK_OPERATOR_MINUS,
     TK_OPERATOR_MULT,
@@ -36,34 +46,42 @@ typedef enum {
 
     TK_OPERATOR_SAME,
     TK_OPERATOR_DIFF,
-
-
-    TK_OPERATOR_LT,
+    TK_OPERATOR_LT, 
     TK_OPERATOR_LTE,
     TK_OPERATOR_GT,
     TK_OPERATOR_GTE,
 
-
-
-
     TK_OPERATOR_AND,
     TK_OPERATOR_OR,
 
-    TK_DELIM,
-    TK_ERRO
+   
+    TK_DELIM, 
+     TK_OPEN_PAREN,   
+     TK_CLOSE_PAREN, 
+     TK_OPEN_BRACE, 
+     TK_CLOSE_BRACE,
+     TK_SEMICOLON, 
+     TK_COMMA,    
+     TK_PERIOD_DELIM
+
+  
+ 
 
 } TokenType;
 
 typedef struct {
-  TokenType type;
-  char *word;
-  int line;
-
+    TokenType type;
+    char *word;
+    int line;
+    union {
+        long int_val;
+        double dec_val;
+    } value;
 } Token;
 
 typedef struct {
-  const char* word;
-  TokenType type;
+    const char* word;
+    TokenType type;
 } ReservedWord;
 
 extern const ReservedWord reserved_words[];
