@@ -8,8 +8,8 @@ principal(){
  inteiro !a, !b1 = 7;
  decimal !cc[1.5];
  inteiro !d;
- !b1 = !a;
- !a++;
+ !b1 != !a;
+ !a--;
  escreva("Escreva um número ");
  leia (!a);
  se (!a <= !b1)

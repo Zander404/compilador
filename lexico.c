@@ -41,6 +41,8 @@ static const char* token_type_to_string_name(TokenType type) {
         case TK_OPERATOR_SUM: return "TK_OPERATOR_SUM";
         case TK_OPERATOR_MINUS: return "TK_OPERATOR_MINUS";
         case TK_OPERATOR_MULT: return "TK_OPERATOR_MULT";
+        case TK_OPERATOR_MORE: return "TK_OPERATOR_MORE";
+        case TK_OPERATOR_LESS: return "TK_OPERATOR_LESS";
         case TK_OPERATOR_DIV: return "TK_OPERATOR_DIV";
         case TK_OPERATOR_POT: return "TK_OPERATOR_POT";
         case TK_OPERATOR_EQUAL: return "TK_OPERATOR_EQUAL";
@@ -401,7 +403,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
         /* Qualquer tipo de operador matemático, Verificar se é um operador valido */
         if ( line [i] == EQUAL ||  line [i] == PLUS ||  line [i] == MINUS ||  line [i] == AMP ||  line [i] == ASTERISK ||  line [i] == CARET ||  line [i] == LT ||  line [i] == GT ||  line [i] == PIPE) {
           lexema[k++] = line[i++];
-          while(!isspace(line[i]) && !isalnum(line[i]) && line[i] != '\0'){
+          while(!isspace(line[i]) && !isalnum(line[i]) && line[i] != '\0' && line[i] != SEMICOLON){
             lexema[k++] = line[i++];
           }
           lexema[k] = '\0';

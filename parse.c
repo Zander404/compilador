@@ -4,28 +4,36 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* Static helper for realloc (if not using a REALLOC macro) */
+static void* my_realloc_wrapper(void* ptr, size_t new_size) {
+    void* new_ptr = realloc(ptr, new_size);
+    if (new_ptr == NULL && new_size > 0) {
+        perror("Erro ao realocar memória para stack");
+        /* Handle fatal error if memory truly runs out, e.g., exit */
+        exit(EXIT_FAILURE);
+    }
+    return new_ptr;
+}
 
 
-
-/* Criar a pilha para Armazenar Simbolos para Duplo Balanceamento () [] {} */
+/* Stack implementation for characters */
 CharStack* stack_create() {
     CharStack* stack = (CharStack*)MALLOC(sizeof(CharStack));
     if (!stack) {
         perror("Erro ao alocar stack");
         exit(EXIT_FAILURE);
     }
-    stack->capacity = 10;
+    stack->capacity = 10; /* Initial capacity */
     stack->data = (char*)MALLOC(sizeof(char) * stack->capacity);
     if (!stack->data) {
         perror("Erro ao alocar dados da stack");
         FREE(stack);
         exit(EXIT_FAILURE);
     }
-    stack->top = -1;
+    stack->top = -1; /* Empty stack */
     return stack;
 }
 
-/* Destruir Stack */
 void stack_destroy(CharStack* stack) {
     if (stack) {
         FREE(stack->data);
@@ -33,25 +41,23 @@ void stack_destroy(CharStack* stack) {
     }
 }
 
-/* Adicionar a Pilha */
 void stack_push(CharStack* stack, char item) {
     if (stack->top + 1 >= stack->capacity) {
-        stack->capacity *= 2;
+        stack->capacity *= 2; /* Double capacity */
         stack->data = (char*)my_realloc_wrapper(stack->data, sizeof(char) * stack->capacity);
     }
     stack->data[++(stack->top)] = item;
 }
 
-/* Remover Elemento da Pilha */
 char stack_pop(CharStack* stack) {
     if (stack_is_empty(stack)) {
+        /* Error: Popping from empty stack. This indicates imbalance. */
         fprintf(stderr, "ERRO: Tentativa de desempilhar de pilha vazia (símbolo de fechamento sem abertura correspondente).\n");
-        return '\0'; 
+        return '\0'; /* Return null char to indicate error/empty */
     }
     return stack->data[(stack->top)--];
 }
 
-/* Olhar o Caracter no TOPO da Pilha */
 char stack_peek(CharStack* stack) {
     if (stack_is_empty(stack)) {
         return '\0';
@@ -63,31 +69,30 @@ int stack_is_empty(CharStack* stack) {
     return stack->top == -1;
 }
 
-/* Função para executar a analise se os simbolos estão Balanciados */
+/* Main function for symbol balancing check across all tokens */
 int check_all_symbols_balance(TokenList* token_list) {
     CharStack* stack;
-    size_t i;
-    int is_balanced = 1;
-    char popped_char;
+    size_t i; /* C90 */
+    int is_balanced = 1; /* Assume balanced until an error is found */
+    char popped_char; /* C90 */
 
     stack = stack_create();
     if (stack == NULL) {
-        return 0;
+        return 0; /* Failed to create stack */
     }
 
     for (i = 0; i < token_list->count; i++) {
         Token* token = token_list->tokens[i];
         if (token == NULL) continue;
 
-        /* Verificar se o simbolo é do tipo DELIMITADOR e um dos seguintes simbolos '(', '[', '{' e adicionar-lo a pilha  */
-        if (token->type == TK_DELIM) { 
+        /* Check for opening delimiters */
+        if (token->type == TK_DELIM) { /* Assuming TK_DELIM for all your structural delimiters */
             if (strcmp(token->word, "(") == 0 ||
                 strcmp(token->word, "[") == 0 ||
                 strcmp(token->word, "{") == 0) {
-                stack_push(stack, token->word[0]);
+                stack_push(stack, token->word[0]); /* Push the actual char */
             }
-
-            /* Se for um simbolo de fechamento, remover o simbolo de abertura correspondente */
+            /* Check for closing delimiters */
             else if (strcmp(token->word, ")") == 0) {
                 if (stack_is_empty(stack)) {
                     fprintf(stderr, "[ERRO SINTÁTICO] Linha %d: Parêntese ')' sem abertura correspondente.\n", token->line);
@@ -124,7 +129,7 @@ int check_all_symbols_balance(TokenList* token_list) {
         }
     }
 
-    /* Verificar se no fim da executção a pilha está vazia, se positivo DESTRUIR PILHA, caso negativo EMITIR ERRO */
+    /* After iterating all tokens, check if stack is empty */
     if (!stack_is_empty(stack)) {
         fprintf(stderr, "[ERRO SINTÁTICO] Pilha não vazia no final do arquivo. Símbolo '%c' não fechado.\n", stack_peek(stack));
         is_balanced = 0;
