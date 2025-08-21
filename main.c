@@ -3,6 +3,7 @@
 #include <string.h>
 #include "tokens.h"
 #include "lexico.h"
+#include "syntactic.h"
 #include "parser.h"
 #include "memory_controller.h"
 
@@ -71,8 +72,8 @@ int main(){
       current_pos += line_length;
     }
   }
-
-  /* Analisar se o Programa está com os Delimitadores '()', '[]', '{}', estão balanceados */
+  
+ /* Analisar se o Programa está com os Delimitadores '()', '[]', '{}', estão balanceados */
   printf("\n--- Verificando Balanceamento de Símbolos ---\n");
   balance_status = check_all_symbols_balance(token_list);
   if (balance_status) {
@@ -82,10 +83,19 @@ int main(){
   }
   printf("-----------------------------------------\n");
 
+ /* Printar tabela de tokens */
+  /* printf("\n--- Verificando Tabela de tokens ---\n"); */
+  /* print_token_list(token_list); */
+  /* printf("-----------------------------------------\n"); */
+  validate_declaration(token_list);
+
+
+
   /*Liberar a Memória, quando a execução terminar */ 
   if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
   if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
   print_memory_report();
+  
 
   /* Se o tudo correto e balanceado emitir sinal de SUCESSO */
   return balance_status ? EXIT_SUCCESS : EXIT_FAILURE;

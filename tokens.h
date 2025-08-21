@@ -70,6 +70,7 @@ typedef struct {
     union {
         long int_val;
         double dec_val;
+        char *str_val;
     } value;
 } Token;
 

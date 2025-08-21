@@ -19,7 +19,7 @@ extern const ReservedWord VALID_OPERATORS[];
 
 
 /* Converter o TOKEN para sua Representação em String */
-static const char* token_type_to_string_name(TokenType type) {
+const char* token_type_to_string_name(TokenType type) {
     switch (type) {
         case TK_PRINCIPAL: return "TK_PRINCIPAL";
         case TK_FUNCAO: return "TK_FUNCAO";
