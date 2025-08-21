@@ -85,7 +85,7 @@ int main(){
 
  /* Printar tabela de tokens */
   /* printf("\n--- Verificando Tabela de tokens ---\n"); */
-  /* print_token_list(token_list); */
+  print_token_list(token_list); 
   /* printf("-----------------------------------------\n"); */
   validate_declaration(token_list);
 

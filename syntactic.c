@@ -103,7 +103,7 @@ void validate_declaration(TokenList *token_list){
                               printf("%c", semicolon->word);
                               printf("[ERRO] Falta ';' no final da declaração (linha %d)\n", t->line);
                           }
-                          i += 5; // pula todos os tokens do array
+                          i += 5;
                           continue;
                       } else {
                           printf("[ERRO] Falta ']' no final do array (linha %d)\n", t->line);
@@ -125,6 +125,8 @@ void validate_declaration(TokenList *token_list){
             continue;
         }
     }
+
+
     /* Validator de Texto */
     if (t->type == TIPO_TEXTO) {
         Token *varToken = token_list->tokens[i+1];
@@ -149,10 +151,9 @@ void validate_declaration(TokenList *token_list){
                     printf("[ERRO] Valor inválido para texto (linha %d)\n", t->line);
                 }
 
-                i += 4; // pula tokens processados
+                i += 4;
                 continue;
             } else {
-                // declaração sem atribuição
                 semicolon = nextToken;
                 if (semicolon && semicolon->type == TK_DELIM && strcmp(semicolon->word, ";") == 0) {
                     printf("[OK] Declaração de texto sem atribuição: %s (linha %d)\n",
@@ -168,7 +169,111 @@ void validate_declaration(TokenList *token_list){
             continue;
         }
     }
+  
+    /* Validate Escreva */
+    if (t->type == TK_ESCREVA) {
+        Token *open_paren = token_list->tokens[i+1];
+        if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
+            printf("[ERRO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
+            continue;
+        }
+
+        size_t j = i + 2;
+        int expect_arg = 1;
+
+        while (j < token_list->count) {
+            Token *arg = token_list->tokens[j];
+
+            if (arg->type == TK_DELIM && strcmp(arg->word, ")") == 0) {
+                j++;
+                break;
+            }
+
+            if (expect_arg) {
+                if (arg->type == TK_STRING || arg->type == TK_NUM_INT || arg->type == TK_NUM_DEC || arg->type == TK_VARIAVEL) {
+                }else {
+                    printf("[ERRO] Argumento inválido em 'escreva' (linha %d)\n", arg->line);
+                }
+                expect_arg = 0;
+            } else {
+                if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
+                    expect_arg = 1;
+                } else {
+                    printf("[ERRO] Esperado ',' entre argumentos em 'escreva' (linha %d)\n", arg->line);
+                }
+            }
+
+            j++;
+        }
+
+        Token *semicolon = token_list->tokens[j];
+        if (!semicolon || semicolon->type != TK_DELIM || strcmp(semicolon->word, ";") != 0) {
+            printf("[ERRO] Esperado ';' ao final de 'escreva' (linha %d)\n", t->line);
+        } else {
+            printf("[OK] escreva válido (linha %d)\n", t->line);
+        }
+
+        i = j;
+    }
+  
+
+    /* Validate Escreva */
+    if (t->type == TK_LEIA) {
+        Token *open_paren = token_list->tokens[i+1];
+        if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
+            printf("[ERRO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
+            continue;
+        }
+
+        size_t j = i + 2;
+        int expect_arg = 1;
+
+        while (j < token_list->count) {
+            Token *arg = token_list->tokens[j];
+
+            if (arg->type == TK_DELIM && strcmp(arg->word, ")") == 0) {
+                j++;
+                break;
+            }
+
+            if (expect_arg) {
+                if (arg->type == TK_VARIAVEL) {
+                }else {
+                    printf("[ERRO] Argumento inválido em 'leia' (linha %d)\n", arg->line);
+                }
+                expect_arg = 0;
+            } else {
+                if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
+                    expect_arg = 1;
+                } else {
+                    printf("[ERRO] Esperado ',' entre argumentos em 'leia' (linha %d)\n", arg->line);
+                }
+            }
+
+            j++;
+        }
+
+        Token *semicolon = token_list->tokens[j];
+        if (!semicolon || semicolon->type != TK_DELIM || strcmp(semicolon->word, ";") != 0) {
+            printf("[ERRO] Esperado ';' ao final de 'leia' (linha %d)\n", t->line);
+        } else {
+            printf("[OK] leia válido (linha %d)\n", t->line);
+        }
+
+        i = j;
+    }
+
+
+
+
+
+
+
+
+    
   }
+
+
 
   return;
 }
