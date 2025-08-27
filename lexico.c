@@ -186,12 +186,15 @@ void checkReservedWord(const char* word, int num_line, TokenList *list){
     Token *token = NULL;
     int i;
     TokenType found_type = TK_ERROR;
+
+
     for(i = 0; i < NUM_RESERVED_WORDS; i++){
         if (strcmp(reserved_words[i].word, word) == 0){
             found_type = reserved_words[i].type;
             break;
         }
     }
+
     token = create_new_token(found_type, word, num_line);
     if(found_type == TK_ERROR){
       fprintf(stderr, "[LINHA] %d | [ERROR] PALAVRA RESERVADA NÃO INDENTIFICADO: '%s'\n", num_line, token->word);
@@ -267,6 +270,7 @@ void checkNumber(const char *word, int num_line, TokenList *list){
 void checkString(const char *word, int num_line, TokenList *list){
     Token *token = create_new_token(TK_STRING, word, num_line);
     if (token == NULL) return;
+    token->value.str_val = STRDUP(word); 
     add_token_to_list(list, token); 
 }
 
@@ -303,6 +307,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
     int i = 0;
     int k = 0;
     char lexema[100];
+    char context[100];
 
     while(line[i] != '\0'){
 
@@ -338,7 +343,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
 
 
-        /* Encontroy uma '!', Indicio de ser uma Variável */
+        /* Encontro uma '!', Indicio de ser uma Variável */
         if (line[i] == EXCLAMATION) {
             if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; }
             while(line[i] != '\0' && (isalnum(line[i]) || line[i] == '_') ) {
@@ -363,22 +368,27 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
         /* Começou com caracter Alphanumerico (a,b,c,d,e,...), indica que é uma PALAVRA RESERVADA*/
         else if(isalpha(line[i])){
-            while(line[i] != '\0' && isalnum(line[i])){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
-            }
-            lexema[k] = '\0';
-            checkReservedWord(lexema, num_line, list);
-            continue;
+          /* Captura lexema (variável ou palavra reservada) */
+          while(isalnum(line[i])){
+              if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+          }
+          lexema[k] = '\0';
+
+          checkReservedWord(lexema, num_line, list);
+          continue;
         }
 
         /* Começa com ' " ' (Double QUOTE), indica que é inicio de uma STRING */
         else if(line[i] == DQUOTE){
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+            if (k < sizeof(lexema) - 1) {
+              i++;
+              lexema[k++] = line[i++];
+            } else { break; }
             while(line[i] != '\0' && line[i] != DQUOTE){
                 if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             }
             if (line[i] == DQUOTE) {
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k] = line[i++]; } else { break; }
             } else {
                 fprintf(stderr, "[LINHA] %d | [ERROR] String literal nao terminada (aspas dupla ausente) na linha %d: '%s'\n", num_line, num_line, lexema);
                 exit(1);

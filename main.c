@@ -11,6 +11,7 @@
 int main(){
   char* memory_buffer = NULL;
   TokenList *token_list = NULL;
+  VarList *var_list = NULL;
   int balance_status = 0; 
   
   /* Alocar um vetor de memoria com o tamanho da nossa memoria definida em memory_controller.h */
@@ -37,6 +38,14 @@ int main(){
     FREE(memory_buffer);
     return EXIT_FAILURE;
   }
+
+  /* Tabela de Variaveis */
+  var_list = create_var_list();
+  if(var_list == NULL){
+    FREE(memory_buffer);
+    return EXIT_FAILURE;
+  }
+
   printf("Lista de Tokens criado com sucesso. \n");
 
 
@@ -85,15 +94,18 @@ int main(){
 
  /* Printar tabela de tokens */
   /* printf("\n--- Verificando Tabela de tokens ---\n"); */
-  print_token_list(token_list); 
+  print_token_list(token_list);
   /* printf("-----------------------------------------\n"); */
-  validate_declaration(token_list);
+  validate_declaration(token_list, var_list);
+  if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
 
+  print_variables(var_list);
 
 
   /*Liberar a Memória, quando a execução terminar */ 
   if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
-  if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
+  if(var_list != NULL){ FREE(var_list); printf("Lista de Variaveis do programa liberada.\n"); }
+
   print_memory_report();
   
 
