@@ -5,8 +5,8 @@ funcao  __media(!e, !aa){
 }
 
 principal(){
- texto !sim = "Teste";
- inteiro !a, !b = 7;
+ texto !sim = "Teste";a
+ inteiro !a, !b1 = 7;
  decimal !cc[1.5];
  inteiro !d;
  !b1 <> !a;
@@ -15,7 +15,7 @@ principal(){
  leia (!a);
  se (!a <= !b1) 
  escreva("A é maior", !a);
- senao escreva("B é maior", !b);
+ senao escreva("B é maior", !b1);
  para (!d = 0; !d<=100; !d = !d+2){
  escreva("D", !d);
  }

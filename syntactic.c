@@ -95,6 +95,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
     var->line = num_line;
     var->type = type;
     var->name = STRDUP(token->word);
+    var->initialized = 1;
 
     // inicialização padrão (caso não tenha "value")
     switch (var->type) {
@@ -108,7 +109,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
           var->value.str_val = NULL;
           break;
       default:
-          printf("[ERRO] Tipo inválido ao criar variável.\n");
+          printf("[ERRO SEMÂNTICO] Tipo inválido ao criar variável.\n");
           break;
     }
 
@@ -187,7 +188,7 @@ Variable *find_variable(VarList *list, const char *name) {
 void set_variable_int(VarList *list, const char *name, long value) {
     Variable *var = find_variable(list, name);
     if (!var) {
-        printf("[ERRO] Variável '%s' não declarada!\n", name);
+        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
         return;
     }
     var->value.int_val = value;
@@ -197,7 +198,7 @@ void set_variable_int(VarList *list, const char *name, long value) {
 void set_variable_dec(VarList *list, const char *name, double value) {
     Variable *var = find_variable(list, name);
     if (!var) {
-        printf("[ERRO] Variável '%s' não declarada!\n", name);
+        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
         return;
     }
     var->value.dec_val = value;
@@ -207,7 +208,7 @@ void set_variable_dec(VarList *list, const char *name, double value) {
 void set_variable_str(VarList *list, const char *name, const char *value) {
     Variable *var = find_variable(list, name);
     if (!var) {
-        printf("[ERRO] Variável '%s' não declarada!\n", name);
+        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
         return;
     }
     var->value.str_val = strdup(value);
@@ -215,11 +216,6 @@ void set_variable_str(VarList *list, const char *name, const char *value) {
 }
 
 void validate_declaration(TokenList *token_list, VarList *var_list){
-
-  printf("Teste de Validar Declaração \n");
-  if(token_list == NULL){
-    printf("Lista de Tokens Vazia");
-  }
 
   int line = -1;
   Variable *var; 
@@ -236,26 +232,20 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
     }
 
     if (t->line != line) {
-      if (line != -1) {
-        printf("\n");
-      }
-
       line = t->line;
-      printf("Linha %d: ", line);
     }
 
     /* Para Função */
-    
     if (t->type == TK_FUNCAO) {
         Token *name = token_list->tokens[i+1];
-        if (!name || name->type != TK_VARIAVEL) {
-            printf("[ERRO] Nome de função inválido (linha %d)\n", t->line);
+        if (!name || name->type != TK_FUNCAO) {
+            printf("[ERRO SINTATICO] Nome de função inválido (linha %d)\n", t->line);
             continue;
         }
 
         Token *open_paren = token_list->tokens[i+2];
         if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
-            printf("[ERRO] Esperado '(' após nome da função (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '(' após nome da função (linha %d)\n", t->line);
             continue;
         }
 
@@ -273,14 +263,14 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
             if (expecting_param) {
                 if (arg->type != TK_VARIAVEL) {
-                    printf("[ERRO] Esperado parâmetro na lista da função (linha %d)\n", arg->line);
+                    printf("[ERRO SINTATICO] Esperado parâmetro na lista da função (linha %d)\n", arg->line);
                 }
                 expecting_param = 0;
             } else {
                 if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
                     expecting_param = 1;
                 } else {
-                    printf("[ERRO] Esperado ',' entre parâmetros (linha %d)\n", arg->line);
+                    printf("[ERRO SINTATICO] Esperado ',' entre parâmetros (linha %d)\n", arg->line);
                 }
             }
             j++;
@@ -289,7 +279,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         // corpo da função
         Token *open_brace = token_list->tokens[j];
         if (!open_brace || open_brace->type != TK_DELIM || strcmp(open_brace->word, "{") != 0) {
-            printf("[ERRO] Esperado '{' no início do corpo da função (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '{' no início do corpo da função (linha %d)\n", t->line);
             continue;
         }
 
@@ -306,10 +296,9 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         }
 
         if (!found_close) {
-            printf("[ERRO] Esperado '}' ao final do corpo da função (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '}' ao final do corpo da função (linha %d)\n", t->line);
         }
 
-        printf("[OK] Função '%s' válida (linha %d)\n", name->word, t->line);
         i = j;
     }
 
@@ -327,9 +316,6 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             if (nextToken && nextToken->type == TK_OPERATOR_EQUAL) {
                 Token *valueToken = token_list->tokens[i+2];
                 if (valueToken && valueToken->type == TK_NUM_INT) {
-                    printf("[OK] inteiro %s = %ld (linha %d)\n",
-                          varToken->word, valueToken->value.int_val, t->line);
-
                     var = create_new_var(TIPO_INTEIRO, varToken, valueToken, t->line);
                     add_var_to_list(var_list, var);
 
@@ -339,8 +325,6 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     i += 2;
                 }
             } else {
-                // declaração simples
-                printf("[OK] inteiro %s (linha %d)\n", varToken->word, t->line);
 
                 var = create_new_var(TIPO_INTEIRO, varToken, NULL, t->line);
                 add_var_to_list(var_list, var);
@@ -371,9 +355,6 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
             // Caso simples: apenas "decimal !x;"
             if (nextToken && nextToken->type == TK_DELIM && strcmp(nextToken->word, ";") == 0) {
-                printf("[OK] Declaração de decimal sem inicialização: %s (linha %d)\n",
-                      varToken->word, t->line);
-
                 var = create_new_var(TIPO_DECIMAL, varToken, NULL, t->line);
                 add_var_to_list(var_list, var);
 
@@ -391,33 +372,31 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 if (valueToken && valueToken->type == TK_NUM_DEC) {
                     if (close_brackets && close_brackets->type == TK_DELIM && strcmp(close_brackets->word, "]") == 0) {
                         if (semicolon && semicolon->type == TK_DELIM && strcmp(semicolon->word, ";") == 0) {
-                            printf("[OK] Declaração de array decimal: %s = [%lf] (linha %d)\n",
-                                  varToken->word, valueToken->value.dec_val, t->line);
 
                             var = create_new_var(TIPO_DECIMAL, varToken, valueToken, t->line);
                             add_var_to_list(var_list, var);
                         } else {
-                            printf("[ERRO] Falta ';' no final da declaração (linha %d)\n", t->line);
+                            printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
                         }
                         i += 5;
                         continue;
                     } else {
-                        printf("[ERRO] Falta ']' no final do array (linha %d)\n", t->line);
+                        printf("[ERRO SINTATICO] Falta ']' no final do array (linha %d)\n", t->line);
                         i += 4;
                         continue;
                     }
                 } else {
-                    printf("[ERRO] Valor inválido dentro do array (linha %d)\n", t->line);
+                    printf("[ERRO SEMANTICO] Valor inválido dentro do array (linha %d)\n", t->line);
                     i += 3;
                     continue;
                 }
             } else {
-                printf("[ERRO] Esperado '[' após variável decimal (linha %d)\n", t->line);
+                printf("[ERRO SINTATICO] Esperado '[' após variável decimal (linha %d)\n", t->line);
                 i += 2;
                 continue;
             }
         } else {
-            printf("[ERRO] Esperado variável após tipo 'decimal' (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado variável após tipo 'decimal' (linha %d)\n", t->line);
             continue;
         }
     }
@@ -442,13 +421,11 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                         var = create_new_var(TIPO_TEXTO, varToken, valueToken, t->line);
                         add_var_to_list(var_list, var);
 
-                        printf("[OK] Declaração de texto com atribuição: %s = %s (linha %d)\n",
-                              varToken->word, valueToken->word, t->line);
                     } else {
-                        printf("[ERRO] Falta ';' no final da declaração (linha %d)\n", t->line);
+                        printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
                     }
                 } else {
-                    printf("[ERRO] Valor inválido para texto (linha %d)\n", t->line);
+                    printf("[ERRO SEMÂNTICO] Valor inválido para texto (linha %d)\n", t->line);
                 }
 
                 i += 4; // pula token da variável, =, valor e ;
@@ -460,16 +437,14 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     var = create_new_var(TIPO_TEXTO, varToken, NULL, t->line);
                     add_var_to_list(var_list, var);
 
-                    printf("[OK] Declaração de texto sem atribuição: %s (linha %d)\n",
-                          varToken->word, t->line);
                 } else {
-                    printf("[ERRO] Falta ';' no final da declaração (linha %d)\n", t->line);
+                    printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
                 }
                 i += 1; // pula token da variável
                 continue;
             }
         } else {
-            printf("[ERRO] Esperado variável após tipo 'texto' (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado variável após tipo 'texto' (linha %d)\n", t->line);
             continue;
         }
     }
@@ -479,7 +454,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
     else if (t->type == TK_LEIA) {
         Token *open_paren = token_list->tokens[i+1];
         if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
-            printf("[ERRO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
             continue;
         }
 
@@ -497,14 +472,14 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             if (expect_arg) {
                 if (arg->type == TK_VARIAVEL) {
                 }else {
-                    printf("[ERRO] Argumento inválido em 'leia' (linha %d)\n", arg->line);
+                    printf("[ERRO SEMÂNTICO] Argumento inválido em 'leia' (linha %d)\n", arg->line);
                 }
                 expect_arg = 0;
             } else {
                 if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
                     expect_arg = 1;
                 } else {
-                    printf("[ERRO] Esperado ',' entre argumentos em 'leia' (linha %d)\n", arg->line);
+                    printf("[ERRO SINTATICO] Esperado ',' entre argumentos em 'leia' (linha %d)\n", arg->line);
                 }
             }
 
@@ -513,9 +488,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
         Token *semicolon = token_list->tokens[j];
         if (!semicolon || semicolon->type != TK_DELIM || strcmp(semicolon->word, ";") != 0) {
-            printf("[ERRO] Esperado ';' ao final de 'leia' (linha %d)\n", t->line);
-        } else {
-            printf("[OK] leia válido (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado ';' ao final de 'leia' (linha %d)\n", t->line);
         }
 
         i = j;
@@ -527,7 +500,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
     else if (t->type == TK_ESCREVA) {
         Token *open_paren = token_list->tokens[i+1];
         if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
-            printf("[ERRO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '(' após 'escreva' (linha %d)\n", t->line);
             continue;
         }
 
@@ -544,34 +517,29 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
             if (expect_arg) {
                 if (arg->type == TK_STRING) {
-                    printf("%s", arg->value.str_val);
                 } 
                 else if (arg->type == TK_NUM_INT) {
-                    printf("%ld", arg->value.int_val);
                 }
                 else if (arg->type == TK_NUM_DEC) {
-                    printf("%f", arg->value.dec_val);
                 }
                 else if (arg->type == TK_VARIAVEL) {
                     Variable *var = find_variable(var_list, arg->word);
                     if (var && var->initialized) {
                         switch (var->type) {
                             case TIPO_INTEIRO:
-                                printf("%ld", var->value.int_val);
                                 break;
                             case TIPO_DECIMAL:
-                                printf("%f", var->value.dec_val);
                                 break;
                             case TIPO_TEXTO:
                                 printf("%s", var->value.str_val ? var->value.str_val : "(null)");
                                 break;
                         }
                     } else {
-                        printf("[ERRO] Variável '%s' não inicializada (linha %d)\n", arg->word, arg->line);
+                        printf("[ERRO SEMANTICO] Variável '%s' não inicializada (linha %d)\n", arg->word, arg->line);
                     }
                 }
                 else {
-                    printf("[ERRO] Argumento inválido em 'escreva' (linha %d)\n", arg->line);
+                    printf("[ERRO SEMANTICO] Argumento inválido em 'escreva' (linha %d)\n", arg->line);
                 }
                 expect_arg = 0;
             } 
@@ -579,7 +547,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
                     expect_arg = 1;
                 } else {
-                    printf("[ERRO] Esperado ',' entre argumentos em 'escreva' (linha %d)\n", arg->line);
+                    printf("[ERRO SINTATICO] Esperado ',' entre argumentos em 'escreva' (linha %d)\n", arg->line);
                 }
             }
 
@@ -588,71 +556,83 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
       Token *semicolon = token_list->tokens[j];
       if (!semicolon || semicolon->type != TK_DELIM || strcmp(semicolon->word, ";") != 0) {
-          printf("[ERRO] Esperado ';' ao final de 'escreva' (linha %d)\n", t->line);
-      } else {
-          printf("\n"); // quebra de linha após a execução
-      }
+          printf("[ERRO SINTATICO] Esperado ';' ao final de 'escreva' (linha %d)\n", t->line);
+      } 
 
       i = j;
   }
    
 
     /* Validate to SE */
-
     else if (t->type == TK_SE) {
-        se_ativo = 1;  // marca que um SE foi aberto
-        Token *open_paren = token_list->tokens[i+1];
-        if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
-            printf("[ERRO] Esperado '(' após 'SE' (linha %d)\n", t->line);
-            continue;
-        }
+          Token *open_paren = token_list->tokens[i+1];
+          if (!open_paren || strcmp(open_paren->word, "(") != 0) {
+              printf("[ERRO SINTATICO] Esperado '(' após SE (linha %d)\n", t->line);
+              continue;
+          }
 
-        size_t j = i + 2;
-        int expect_operand = 1;
-        int expect_operator = 0;
+          int found_comparison = 0;
+          int found_and_or = 0;
 
-        while (j < token_list->count) {
-            Token *arg = token_list->tokens[j];
+          // percorre até achar ')'
+          for (size_t j = i+2; j < token_list->count; j++) {
+              Token *arg = token_list->tokens[j];
 
-            if (arg->type == TK_DELIM && strcmp(arg->word, ")") == 0) {
-                j++;
-                break;
-            }
+              if (strcmp(arg->word, ")") == 0) {
+                  if (!found_comparison) {
+                      printf("[ERRO SINTATICO] Condição inválida em SE (linha %d)\n", arg->line);
+                  }
+                  break;
+              }
 
-            if (expect_operand) {
-                if (arg->type == TK_VARIAVEL || arg->type == TK_NUM_INT || arg->type == TK_NUM_DEC) {
-                    // válido
-                } else {
-                    printf("[ERRO] Operando inválido em 'SE' (linha %d)\n", arg->line);
-                }
-                expect_operand = 0;
-                expect_operator = 1;
-            } else if (expect_operator) {
-                if (arg->type == TK_OPERATOR_SAME  || arg->type == TK_OPERATOR_DIFF ||
-                    arg->type == TK_OPERATOR_LT    || arg->type == TK_OPERATOR_LTE  ||
-                    arg->type == TK_OPERATOR_GT    || arg->type == TK_OPERATOR_GTE  ||
-                    arg->type == TK_OPERATOR_AND   || arg->type == TK_OPERATOR_OR) {
-                    expect_operand = 1;
-                    expect_operator = (arg->type == TK_OPERATOR_AND || arg->type == TK_OPERATOR_OR) ? 1 : 0;
-                } else {
-                    printf("[ERRO] Operador inválido em 'SE' (linha %d)\n", arg->line);
-                }
-            }
+              // ===== Verificação de variáveis =====
+              if (arg->type == TK_VARIAVEL) {
+                  Variable *var = find_variable(var_list, arg->word);
+                  if (!var) {
+                      printf("[ERRO SEMANTICO] Variável '%s' não declarada (linha %d)\n", arg->word, arg->line);
+                  } else if (!var->initialized) {
+                      printf("[ERRO SEMANTICO] Variável '%s' usada sem inicialização (linha %d)\n", arg->word, arg->line);
+                  }
+              }
 
-            j++;
-        }
+              // ===== Comparadores =====
+              if (strcmp(arg->word, "==") == 0 || strcmp(arg->word, "<>") == 0 ||
+                  strcmp(arg->word, "<") == 0 || strcmp(arg->word, ">") == 0 ||
+                  strcmp(arg->word, "<=") == 0 || strcmp(arg->word, ">=") == 0) {
+                  found_comparison = 1;
+              }
 
-        printf("[OK] SE válido (linha %d)\n", t->line);
+              // ===== AND / OR =====
+              if (strcmp(arg->word, "&&") == 0 || strcmp(arg->word, "||") == 0) {
+                  if (!found_comparison) {
+                      printf("[ERRO SINTATICO] Operador lógico '%s' sem comparação anterior (linha %d)\n", arg->word, arg->line);
+                  }
+                  found_and_or = 1;
+                  found_comparison = 0; // espera nova comparação depois do &&
+              }
+          }
 
-        i = j;
-    }
+          // ===== Checar abertura do bloco =====
+          Token *open_brace = NULL;
+          for (size_t j = i; j < token_list->count; j++) {
+              if (strcmp(token_list->tokens[j]->word, "{") == 0) {
+                  open_brace = token_list->tokens[j];
+                  break;
+              }
+          }
+          if (!open_brace) {
+              printf("[ERRO SINTATICO] Bloco esperado após SE (linha %d)\n", t->line);
+          }
+
+          // marca que já houve um SE
+          se_ativo = 1;
+      }
 
       /* SENAO só se existir SE anterior */
       else if (t->type == TK_SENAO) {
           if (!se_ativo) {
-              printf("[ERRO] 'SENAO' sem 'SE' correspondente (linha %d)\n", t->line);
+              printf("[ERRO SINTATICO] 'SENAO' sem 'SE' correspondente (linha %d)\n", t->line);
           } else {
-              printf("[OK] SENAO válido (linha %d)\n", t->line);
               se_ativo = 0; // fecha o SE ativo
           }
       }
@@ -661,7 +641,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
     else if (t->type == TK_PARA) {
         Token *open_paren = token_list->tokens[i+1];
         if (!open_paren || open_paren->type != TK_DELIM || strcmp(open_paren->word, "(") != 0) {
-            printf("[ERRO] Esperado '(' após 'PARA' (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Esperado '(' após 'PARA' (linha %d)\n", t->line);
             continue;
         }
 
@@ -690,7 +670,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                         j += 2; // pula var e '='
                         continue;
                     } else {
-                        printf("[ERRO] Esperado '=' após variável em inicialização do PARA (linha %d)\n", arg->line);
+                        printf("[ERRO SINTATICO] Esperado '=' após variável em inicialização do PARA (linha %d)\n", arg->line);
                     }
                 }
             }
@@ -703,7 +683,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         }
 
         if (!found_x1) {
-            printf("[ERRO] Inicialização inválida em PARA (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Inicialização inválida em PARA (linha %d)\n", t->line);
         }
 
         /* ============================
@@ -727,7 +707,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         }
 
         if (!found_x2) {
-            printf("[ERRO] Condição inválida em PARA (linha %d)\n", t->line);
+            printf("[ERRO SEMANTICO] Condição inválida em PARA (linha %d)\n", t->line);
         }
 
         /* ============================
@@ -767,7 +747,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         }
 
         if (!found_x3) {
-            printf("[ERRO] Incremento inválido em PARA (linha %d)\n", t->line);
+            printf("[ERRO SINTATICO] Incremento inválido em PARA (linha %d)\n", t->line);
         }
 
         /* ============================
@@ -788,18 +768,12 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 j++;
             }
             if (!found_close) {
-                printf("[ERRO] Esperado '}' ao final do bloco PARA (linha %d)\n", t->line);
+                printf("[ERRO SINTATICO] Esperado '}' ao final do bloco PARA (linha %d)\n", t->line);
             }
         }
 
-        printf("[OK] PARA válido (linha %d)\n", t->line);
         i = j;
-    }
-
-        
-      }
-
-
-
+    }        
+  }
   return;
 }
