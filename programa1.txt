@@ -6,7 +6,7 @@ funcao  __media(!e, !aa){
 
 principal(){
  texto !sim = "Teste";
- inteiro !a, !b1 = 7;
+ inteiro !a, !b = 7;
  decimal !cc[1.5];
  inteiro !d;
  !b1 <> !a;

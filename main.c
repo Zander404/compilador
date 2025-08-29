@@ -92,9 +92,9 @@ int main(){
   }
   printf("-----------------------------------------\n");
 
- /* Printar tabela de tokens */
+  /* Printar tabela de tokens */
   /* printf("\n--- Verificando Tabela de tokens ---\n"); */
-  print_token_list(token_list);
+  /* print_token_list(token_list); */
   /* printf("-----------------------------------------\n"); */
   validate_declaration(token_list, var_list);
   if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
