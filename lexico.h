@@ -16,6 +16,7 @@ typedef struct {
 TokenList* create_token_list();
 void add_token_to_list(TokenList *list, Token *token);
 void destroy_token_list(TokenList *list);
+void destroy_token_list_without_tokens(TokenList *list);
 void print_token_list(TokenList *list);
 
 
@@ -30,6 +31,7 @@ void checkReservedWord(const char* word, int num_line, TokenList *list);
 void checkNumber(const char *word, int num_line, TokenList *list);
 void checkString(const char *word, int num_line, TokenList *list);
 void checkOperator(const char *word, int num_line, TokenList *list);
+Token* create_new_token(TokenType type, const char* word, int num_line); // Added for external linkage
 void invalidToken();
 
 #endif

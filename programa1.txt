@@ -5,12 +5,13 @@ funcao  __media(!e, !aa){
 }
 
 principal(){
- texto !sim = "Teste";a
+ texto !sim = "Teste";
  inteiro !a, !b1 = 7;
  decimal !cc[1.5];
  inteiro !d;
  !b1 <> !a;
  !a--;
+ inteiro !teste = __media(1,2);
  escreva("Escreva um número ");
  leia (!a);
  se (!a <= !b1) 

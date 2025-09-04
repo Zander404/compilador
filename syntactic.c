@@ -10,6 +10,7 @@
 #include "memory_controller.h"
 #include "lexico.h"
 #include "syntactic.h"
+#include "semantic.h" // Added for semantic function declarations
 #include "ascii_table.h"
 #include "tokens.h"
 
@@ -109,7 +110,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
           var->value.str_val = NULL;
           break;
       default:
-          printf("[ERRO SEMÂNTICO] Tipo inválido ao criar variável.\n");
+          // printf("[ERRO SEMÂNTICO] Tipo inválido ao criar variável.\n"); // Removed for TK_UNKNOWN parameters
           break;
     }
 
@@ -235,10 +236,80 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
       line = t->line;
     }
 
+    // New block for Function Calls (must come before TK_FUNCAO declaration)
+    else if (t->type == TK_IDENTIFICADOR) { // Could be a function call
+        Token *name_token = t;
+        Token *open_paren = token_list->tokens[i+1];
+
+        if (open_paren && open_paren->type == TK_DELIM && strcmp(open_paren->word, "(") == 0) {
+            // This is likely a function call
+            size_t j = i + 2;
+            TokenList *args_tokens = create_token_list();
+            int expecting_arg = 1;
+
+            while (j < token_list->count) {
+                Token *arg = token_list->tokens[j];
+
+                if (arg->type == TK_DELIM && strcmp(arg->word, ")") == 0) {
+                    j++; // End of argument list
+                    break;
+                }
+
+                if (expecting_arg) {
+                    // Collect argument tokens. A real parser would evaluate these expressions.
+                    add_token_to_list(args_tokens, arg);
+                    expecting_arg = 0;
+                } else {
+                    if (arg->type == TK_DELIM && strcmp(arg->word, ",") == 0) {
+                        expecting_arg = 1;
+                    } else {
+                        printf("[ERRO SINTATICO] Esperado ',' entre argumentos da função (linha %d)\\n", arg->line);
+                        destroy_token_list_without_tokens(args_tokens);
+                        return; // Or handle error and continue
+                    }
+                }
+                j++;
+            }
+
+            // Validate the function call semantically
+            TokenType function_return_type = semantic_validate_function_call(name_token, args_tokens);
+            destroy_token_list_without_tokens(args_tokens); // Clean up temporary list
+
+            if (function_return_type == TK_ERROR) {
+                // Error already printed by semantic_validate_function_call
+                i = j; // Advance past the function call
+                continue;
+            }
+
+            // Now, handle the assignment if this function call is part of one
+            // This is a very simplified check. It assumes the pattern: var = function_call;
+            Token *assign_op = token_list->tokens[j];
+            if (assign_op && assign_op->type == TK_OPERATOR_EQUAL && strcmp(assign_op->word, "=") == 0) {
+                Token *var_to_assign = token_list->tokens[i-1]; // Assuming variable is just before the function call
+                if (var_to_assign && var_to_assign->type == TK_VARIAVEL) {
+                    // Create a dummy token to represent the function's return value for semantic_check_assignment_type
+                    Token *return_value_token = create_new_token(function_return_type, "", name_token->line);
+                    if (semantic_check_assignment_type(var_list, var_to_assign, return_value_token) != 0) {
+                        // Error already printed by semantic_check_assignment_type
+                    }
+                    FREE(return_value_token->word); // Free the dummy token's word
+                    FREE(return_value_token); // Free the dummy token
+                } else {
+                    printf("[ERRO SINTATICO] Esperado variável antes da atribuição de função (linha %d)\n", name_token->line);
+                }
+                i = j + 1; // Advance past the assignment
+                continue;
+            } else {
+                // If not an assignment, just advance past the function call
+                i = j;
+                continue;
+            }
+        }
+    }
     /* Para Função */
     if (t->type == TK_FUNCAO) {
         Token *name = token_list->tokens[i+1];
-        if (!name || name->type != TK_FUNCAO) {
+        if (!name || name->type != TK_IDENTIFICADOR) { // Function names should be general identifiers
             printf("[ERRO SINTATICO] Nome de função inválido (linha %d)\n", t->line);
             continue;
         }
@@ -251,6 +322,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
         size_t j = i + 3;
         int expecting_param = 1;
+        VarList *function_params = create_var_list(); // Create a list to hold function parameters
 
         // valida parâmetros
         while (j < token_list->count) {
@@ -262,7 +334,12 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             }
 
             if (expecting_param) {
-                if (arg->type != TK_VARIAVEL) {
+                if (arg->type == TK_VARIAVEL) {
+                    // Assuming parameters are implicitly of type TK_UNKNOWN or need to be resolved later
+                    // For now, just add the variable name. Type resolution would happen in semantic analysis.
+                    Variable *param_var = create_new_var(TK_UNKNOWN, arg, NULL, arg->line); // TK_UNKNOWN as placeholder
+                    add_var_to_list(function_params, param_var);
+                } else {
                     printf("[ERRO SINTATICO] Esperado parâmetro na lista da função (linha %d)\n", arg->line);
                 }
                 expecting_param = 0;
@@ -275,6 +352,13 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             }
             j++;
         }
+
+        // After parsing parameters, call semantic function to add function declaration
+        // Assuming return type is TK_UNKNOWN for now, or needs to be explicitly parsed
+        if (semantic_add_function_declaration(name, TK_UNKNOWN, function_params) != 0) {
+            printf("[ERRO SEMANTICO] Erro ao declarar função '%s' (linha %d)\n", name->word, name->line);
+        }
+        destroy_var_list(function_params); // Clean up the temporary list
 
         // corpo da função
         Token *open_brace = token_list->tokens[j];
@@ -311,13 +395,98 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 break;
             }
 
+            // Semantic: Add variable declaration
+            if (semantic_add_variable_declaration(varToken, TIPO_INTEIRO) != 0) {
+                printf("[ERRO SEMANTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
+                // Decide whether to continue or break on error
+            }
+
             Token *nextToken = token_list->tokens[i+1];
 
             if (nextToken && nextToken->type == TK_OPERATOR_EQUAL) {
+                Token *rhs_start_token = token_list->tokens[i+2]; // Start of the right-hand side
+
+                // Check if it's a function call
+                if (rhs_start_token && rhs_start_token->type == TK_IDENTIFICADOR) {
+                    Token *open_paren = token_list->tokens[i+3];
+                    if (open_paren && open_paren->type == TK_DELIM && strcmp(open_paren->word, "(") == 0) {
+                        // It's a function call on the RHS
+                        Token *name_token = rhs_start_token;
+                        size_t func_call_start_idx = i + 2; // Index of function name
+                        size_t func_call_end_idx = func_call_start_idx; // Will be updated to end of function call
+
+                        // Find the end of the function call (matching parenthesis)
+                        int paren_balance = 0;
+                        size_t k = func_call_start_idx + 1; // Start after function name
+                        while (k < token_list->count) {
+                            if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, "(") == 0) {
+                                paren_balance++;
+                            } else if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                paren_balance--;
+                            }
+                            if (paren_balance == 0 && token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                func_call_end_idx = k;
+                                break;
+                            }
+                            k++;
+                        }
+
+                        if (paren_balance != 0) {
+                            printf("[ERRO SINTATICO] Parênteses desbalanceados na chamada de função (linha %d)\n", name_token->line);
+                            i = k; // Advance to avoid infinite loop
+                            continue;
+                        }
+
+                        // Extract arguments for semantic_validate_function_call
+                        TokenList *args_tokens = create_token_list();
+                        size_t arg_start_idx = func_call_start_idx + 2; // After '('
+                        size_t arg_end_idx = func_call_end_idx - 1; // Before ')'
+
+                        // Simplified: just collect tokens between parentheses
+                        for (size_t arg_idx = arg_start_idx; arg_idx <= arg_end_idx; arg_idx++) {
+                            add_token_to_list(args_tokens, token_list->tokens[arg_idx]);
+                        }
+
+                        // Validate the function call semantically
+                        TokenType function_return_type = semantic_validate_function_call(name_token, args_tokens);
+                        destroy_token_list_without_tokens(args_tokens); // Clean up temporary list
+
+                        if (function_return_type == TK_ERROR) {
+                            // Error already printed by semantic_validate_function_call
+                            i = func_call_end_idx; // Advance past the function call
+                            continue;
+                        }
+
+                        // Create the variable with default initialization
+                        var = create_new_var(TIPO_INTEIRO, varToken, NULL, t->line); // Pass NULL for value
+                        add_var_to_list(var_list, var);
+
+                        // Now, create a dummy token for the function's return type for semantic_check_assignment_type
+                        Token *dummy_return_type_token = create_new_token(function_return_type, "", name_token->line);
+                        if (semantic_check_assignment_type(var_list, varToken, dummy_return_type_token) != 0) {
+                            // Error already printed by semantic_check_assignment_type
+                        }
+                        FREE(dummy_return_type_token->word); // Free the dummy token's word
+                        FREE(dummy_return_type_token); // Free the dummy token
+
+                        i = func_call_end_idx + 1; // Advance past the function call and closing parenthesis
+                        if (i < token_list->count && token_list->tokens[i]->type == TK_DELIM && strcmp(token_list->tokens[i]->word, ";") == 0) {
+                            break; // End of declaration statement
+                        }
+                        continue;
+                    }
+                }
+
+                // Original logic for integer literal assignment
                 Token *valueToken = token_list->tokens[i+2];
                 if (valueToken && valueToken->type == TK_NUM_INT) {
                     var = create_new_var(TIPO_INTEIRO, varToken, valueToken, t->line);
                     add_var_to_list(var_list, var);
+
+                    // Semantic: Check assignment type
+                    if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
+                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                    }
 
                     i += 3; // pula var = valor
                 } else {
@@ -332,10 +501,10 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 i++; // só pula a variável
             }
 
-            // Agora verifica se tem vírgula (mais variáveis) ou ponto e vírgula (fim)
+            // Now check for comma or semicolon
             Token *sep = token_list->tokens[i];
             if (sep && sep->type == TK_DELIM && strcmp(sep->word, ",") == 0) {
-                i++; // continua para próxima variável
+                i++; // continue to next variable
                 continue;
             } else if (sep && sep->type == TK_DELIM && strcmp(sep->word, ";") == 0) {
                 break;
@@ -351,15 +520,111 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
     else if (t->type == TIPO_DECIMAL) {
         Token *varToken = token_list->tokens[i+1];
         if (varToken && varToken->type == TK_VARIAVEL) {
+            // Semantic: Add variable declaration
+            if (semantic_add_variable_declaration(varToken, TIPO_DECIMAL) != 0) {
+                printf("[ERRO SEMANTICO] Erro ao declarar variável \'%s\' (linha %d)\
+", varToken->word, varToken->line);
+            }
             Token *nextToken = token_list->tokens[i+2];
 
-            // Caso simples: apenas "decimal !x;"
+            // Caso simples: apenas "decimal !x;">
             if (nextToken && nextToken->type == TK_DELIM && strcmp(nextToken->word, ";") == 0) {
                 var = create_new_var(TIPO_DECIMAL, varToken, NULL, t->line);
                 add_var_to_list(var_list, var);
 
                 i += 2;
                 continue;
+            }
+            // New block for assignment with '=' 
+            else if (nextToken && nextToken->type == TK_OPERATOR_EQUAL) {
+                Token *rhs_start_token = token_list->tokens[i+2]; // Start of the right-hand side
+
+                // Check if it's a function call
+                if (rhs_start_token && rhs_start_token->type == TK_IDENTIFICADOR) {
+                    Token *open_paren = token_list->tokens[i+3];
+                    if (open_paren && open_paren->type == TK_DELIM && strcmp(open_paren->word, "(") == 0) {
+                        // It's a function call on the RHS
+                        Token *name_token = rhs_start_token;
+                        size_t func_call_start_idx = i + 2; // Index of function name
+                        size_t func_call_end_idx = func_call_start_idx; // Will be updated to end of function call
+
+                        // Find the end of the function call (matching parenthesis)
+                        int paren_balance = 0;
+                        size_t k = func_call_start_idx + 1; // Start after function name
+                        while (k < token_list->count) {
+                            if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, "(") == 0) {
+                                paren_balance++;
+                            } else if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                paren_balance--;
+                            }
+                            if (paren_balance == 0 && token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                func_call_end_idx = k;
+                                break;
+                            }
+                            k++;
+                        }
+
+                        if (paren_balance != 0) {
+                            printf("[ERRO SINTATICO] Parênteses desbalanceados na chamada de função (linha %d)\n", name_token->line);
+                            i = k; // Advance to avoid infinite loop
+                            continue;
+                        }
+
+                        // Extract arguments for semantic_validate_function_call
+                        TokenList *args_tokens = create_token_list();
+                        size_t arg_start_idx = func_call_start_idx + 2; // After '(' 
+                        size_t arg_end_idx = func_call_end_idx - 1; // Before ')'
+
+                        // Simplified: just collect tokens between parentheses
+                        for (size_t arg_idx = arg_start_idx; arg_idx <= arg_end_idx; arg_idx++) {
+                            add_token_to_list(args_tokens, token_list->tokens[arg_idx]);
+                        }
+
+                        // Validate the function call semantically
+                        TokenType function_return_type = semantic_validate_function_call(name_token, args_tokens);
+                        destroy_token_list_without_tokens(args_tokens); // Clean up temporary list
+
+                        if (function_return_type == TK_ERROR) {
+                            // Error already printed by semantic_validate_function_call
+                            i = func_call_end_idx; // Advance past the function call
+                            continue;
+                        }
+
+                        // Create a dummy token to represent the function's return value for semantic_check_assignment_type
+                        Token *return_value_token = create_new_token(function_return_type, "", name_token->line); 
+                        var = create_new_var(TIPO_DECIMAL, varToken, return_value_token, t->line); // Use return_value_token for var creation
+                        add_var_to_list(var_list, var);
+
+                        if (semantic_check_assignment_type(var_list, varToken, return_value_token) != 0) {
+                            // Error already printed by semantic_check_assignment_type
+                        }
+                        FREE(return_value_token->word); // Free the dummy token's word
+                        FREE(return_value_token); // Free the dummy token
+
+                        i = func_call_end_idx + 1; // Advance past the function call and closing parenthesis
+                        if (i < token_list->count && token_list->tokens[i]->type == TK_DELIM && strcmp(token_list->tokens[i]->word, ";") == 0) {
+                            break; // End of declaration statement
+                        }
+                        continue;
+                    }
+                }
+
+                // Original logic for decimal literal assignment
+                Token *valueToken = token_list->tokens[i+2];
+                if (valueToken && (valueToken->type == TK_NUM_DEC || valueToken->type == TK_NUM_INT)) { // Allow int to decimal
+                    var = create_new_var(TIPO_DECIMAL, varToken, valueToken, t->line);
+                    add_var_to_list(var_list, var);
+
+                    // Semantic: Check assignment type
+                    if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
+                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                    }
+
+                    i += 3; // pula var = valor
+                } else {
+                    printf("[ERRO] Esperado número decimal ou inteiro após '=' (linha %d)\n", t->line);
+                    i += 2;
+                }
             }
 
             // Caso com array: decimal !x[5];
@@ -375,6 +640,11 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
                             var = create_new_var(TIPO_DECIMAL, varToken, valueToken, t->line);
                             add_var_to_list(var_list, var);
+
+                            // Semantic: Check assignment type for array initialization
+                            if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
+                                printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                            }
                         } else {
                             printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
                         }
@@ -405,15 +675,92 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         Token *varToken = token_list->tokens[i+1];
 
         if (varToken && varToken->type == TK_VARIAVEL) {
+            // Semantic: Add variable declaration
+            if (semantic_add_variable_declaration(varToken, TIPO_TEXTO) != 0) {
+                printf("[ERRO SEMANTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
+            }
             Token *nextToken = token_list->tokens[i+2];
             Token *valueToken = NULL;
             Token *semicolon = NULL;
             Variable *var;
 
             if (nextToken && nextToken->type == TK_OPERATOR_EQUAL) {
-                valueToken = token_list->tokens[i+3];
-                printf("%s", valueToken->word);
-                semicolon = token_list->tokens[i+4];
+                Token *rhs_start_token = token_list->tokens[i+2]; // Start of the right-hand side
+
+                // Check if it's a function call
+                if (rhs_start_token && rhs_start_token->type == TK_IDENTIFICADOR) {
+                    Token *open_paren = token_list->tokens[i+3];
+                    if (open_paren && open_paren->type == TK_DELIM && strcmp(open_paren->word, "(") == 0) {
+                        // It's a function call on the RHS
+                        Token *name_token = rhs_start_token;
+                        size_t func_call_start_idx = i + 2; // Index of function name
+                        size_t func_call_end_idx = func_call_start_idx; // Will be updated to end of function call
+
+                        // Find the end of the function call (matching parenthesis)
+                        int paren_balance = 0;
+                        size_t k = func_call_start_idx + 1; // Start after function name
+                        while (k < token_list->count) {
+                            if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, "(") == 0) {
+                                paren_balance++;
+                            } else if (token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                paren_balance--;
+                            }
+                            if (paren_balance == 0 && token_list->tokens[k]->type == TK_DELIM && strcmp(token_list->tokens[k]->word, ")") == 0) {
+                                func_call_end_idx = k;
+                                break;
+                            }
+                            k++;
+                        }
+
+                        if (paren_balance != 0) {
+                            printf("[ERRO SINTATICO] Parênteses desbalanceados na chamada de função (linha %d)\n", name_token->line);
+                            i = k; // Advance to avoid infinite loop
+                            continue;
+                        }
+
+                        // Extract arguments for semantic_validate_function_call
+                        TokenList *args_tokens = create_token_list();
+                        size_t arg_start_idx = func_call_start_idx + 2; // After '('
+                        size_t arg_end_idx = func_call_end_idx - 1; // Before ')'
+
+                        // Simplified: just collect tokens between parentheses
+                        for (size_t arg_idx = arg_start_idx; arg_idx <= arg_end_idx; arg_idx++) {
+                            add_token_to_list(args_tokens, token_list->tokens[arg_idx]);
+                        }
+
+                        // Validate the function call semantically
+                        TokenType function_return_type = semantic_validate_function_call(name_token, args_tokens);
+                        destroy_token_list_without_tokens(args_tokens); // Clean up temporary list
+
+                        if (function_return_type == TK_ERROR) {
+                            // Error already printed by semantic_validate_function_call
+                            i = func_call_end_idx; // Advance past the function call
+                            continue;
+                        }
+
+                        // Create a dummy token to represent the function's return value for semantic_check_assignment_type
+                        Token *return_value_token = create_new_token(function_return_type, "", name_token->line);
+                        var = create_new_var(TIPO_TEXTO, varToken, return_value_token, t->line); // Use return_value_token for var creation
+                        add_var_to_list(var_list, var);
+
+                        if (semantic_check_assignment_type(var_list, varToken, return_value_token) != 0) {
+                            // Error already printed by semantic_check_assignment_type
+                        }
+                        FREE(return_value_token->word); // Free the dummy token's word
+                        FREE(return_value_token); // Free the dummy token
+
+                        i = func_call_end_idx + 1; // Advance past the function call and closing parenthesis
+                        if (i < token_list->count && token_list->tokens[i]->type == TK_DELIM && strcmp(token_list->tokens[i]->word, ";") == 0) {
+                            break; // End of declaration statement
+                        }
+                        continue;
+                    }
+                }
+
+                // Original logic for string literal assignment
+                Token *valueToken = token_list->tokens[i+3]; // Adjusted index for valueToken
+                printf("%s", valueToken->word); // Keep original print
+                semicolon = token_list->tokens[i+4]; // Adjusted index for semicolon
 
                 if (valueToken && valueToken->type == TK_STRING) {
                     if (semicolon && semicolon->type == TK_DELIM && strcmp(semicolon->word, ";") == 0) {
@@ -421,6 +768,10 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                         var = create_new_var(TIPO_TEXTO, varToken, valueToken, t->line);
                         add_var_to_list(var_list, var);
 
+                        // Semantic: Check assignment type
+                        if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
+                            printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                        }
                     } else {
                         printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
                     }
@@ -428,7 +779,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     printf("[ERRO SEMÂNTICO] Valor inválido para texto (linha %d)\n", t->line);
                 }
 
-                i += 4; // pula token da variável, =, valor e ;
+                i += 4; // Adjusted: pula token da variável, =, valor e ;
                 continue;
             } else {
                 semicolon = nextToken;
@@ -471,6 +822,10 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
             if (expect_arg) {
                 if (arg->type == TK_VARIAVEL) {
+                    // Semantic: Check if variable is declared
+                    if (semantic_get_variable_type(var_list, arg) == TK_UNKNOWN) {
+                        printf("[ERRO SEMANTICO] Variável '%s' não declarada em 'leia' (linha %d)\n", arg->word, arg->line);
+                    }
                 }else {
                     printf("[ERRO SEMÂNTICO] Argumento inválido em 'leia' (linha %d)\n", arg->line);
                 }
@@ -523,19 +878,17 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 else if (arg->type == TK_NUM_DEC) {
                 }
                 else if (arg->type == TK_VARIAVEL) {
-                    Variable *var = find_variable(var_list, arg->word);
-                    if (var && var->initialized) {
-                        switch (var->type) {
-                            case TIPO_INTEIRO:
-                                break;
-                            case TIPO_DECIMAL:
-                                break;
-                            case TIPO_TEXTO:
-                                printf("%s", var->value.str_val ? var->value.str_val : "(null)");
-                                break;
-                        }
+                    // Semantic: Check if variable is declared
+                    TokenType var_type = semantic_get_variable_type(var_list, arg);
+                    if (var_type == TK_UNKNOWN) {
+                        printf("[ERRO SEMANTICO] Variável '%s' não declarada em 'escreva' (linha %d)\n", arg->word, arg->line);
                     } else {
-                        printf("[ERRO SEMANTICO] Variável '%s' não inicializada (linha %d)\n", arg->word, arg->line);
+                        // Semantic: Check if variable is initialized
+                        if (semantic_check_variable_initialized(var_list, arg) != 0) {
+                            printf("[ERRO SEMANTICO] Variável '%s' usada sem inicialização em 'escreva' (linha %d)\n", arg->word, arg->line);
+                        }
+                        // The switch statement for printing can remain, as it's runtime behavior
+                        // and assumes the variable is valid.
                     }
                 }
                 else {
@@ -596,10 +949,17 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
               }
 
               // ===== Comparadores =====
-              if (strcmp(arg->word, "==") == 0 || strcmp(arg->word, "<>") == 0 ||
+              if (strcmp(arg->word, "==") == 0 || strcmp(arg->word, "<>" ) == 0 ||
                   strcmp(arg->word, "<") == 0 || strcmp(arg->word, ">") == 0 ||
                   strcmp(arg->word, "<=") == 0 || strcmp(arg->word, ">=") == 0) {
                   found_comparison = 1;
+                  // Semantic: Check type compatibility for comparison
+                  // Assuming tokens immediately before and after are operands
+                  Token *left_operand = token_list->tokens[j-1]; // Assuming j is current index of operator
+                  Token *right_operand = token_list->tokens[j+1];
+                  if (semantic_check_comparison_type(var_list, left_operand, arg, right_operand) != 0) {
+                      printf("[ERRO SEMANTICO] Tipos incompatíveis na comparação (linha %d)\n", arg->line);
+                  }
               }
 
               // ===== AND / OR =====
@@ -667,6 +1027,12 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     if (next && next->type == TK_OPERATOR_EQUAL && strcmp(next->word, "=") == 0) {
                         // !a = ...
                         found_x1 = 1;
+                        // Semantic: Check assignment type
+                        Token *var_to_assign = arg; // The variable being assigned to
+                        Token *value_assigned = token_list->tokens[j+2]; // The value being assigned
+                        if (semantic_check_assignment_type(var_list, var_to_assign, value_assigned) != 0) {
+                            printf("[ERRO SEMANTICO] Atribuição de tipo incompatível em PARA (linha %d)\n", arg->line);
+                        }
                         j += 2; // pula var e '='
                         continue;
                     } else {
@@ -702,6 +1068,16 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             if (arg->type == TK_VARIAVEL || arg->type == TK_NUM_INT || arg->type == TK_NUM_DEC) {
                 found_x2 = 1;
             }
+            // Semantic: Check for comparison operators and perform type check
+            if (strcmp(arg->word, "==") == 0 || strcmp(arg->word, "<>" ) == 0 ||
+                strcmp(arg->word, "<") == 0 || strcmp(arg->word, ">") == 0 ||
+                strcmp(arg->word, "<=") == 0 || strcmp(arg->word, ">=") == 0) {
+                Token *left_operand = token_list->tokens[j-1];
+                Token *right_operand = token_list->tokens[j+1];
+                if (semantic_check_comparison_type(var_list, left_operand, arg, right_operand) != 0) {
+                    printf("[ERRO SEMANTICO] Tipos incompatíveis na condição PARA (linha %d)\n", arg->line);
+                }
+            }
 
             j++;
         }
@@ -729,18 +1105,36 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 if (next && next->type == TK_OPERATOR_EQUAL &&
                     (strcmp(next->word, "++") == 0 || strcmp(next->word, "--") == 0)) {
                     found_x3 = 1;
+                    // Semantic: Check if variable is numeric for increment/decrement
+                    TokenType var_type = semantic_get_variable_type(var_list, arg);
+                    if (var_type != TIPO_INTEIRO && var_type != TIPO_DECIMAL) {
+                        printf("[ERRO SEMANTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", arg->word, arg->line);
+                    }
                     j += 2;
                     continue;
                 }
                 else if (next && next->type == TK_OPERATOR_EQUAL && strcmp(next->word, "=") == 0) {
                     // atribuição matemática
                     found_x3 = 1;
+                    // Semantic: Check assignment type
+                    Token *var_to_assign = arg;
+                    Token *value_assigned = token_list->tokens[j+2]; // Assuming simple assignment like a = b
+                    if (semantic_check_assignment_type(var_list, var_to_assign, value_assigned) != 0) {
+                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível em incremento PARA (linha %d)\n", arg->line);
+                    }
                 }
             }
             else if (arg->type == TK_OPERATOR_EQUAL &&
                      (strcmp(arg->word, "++") == 0 || strcmp(arg->word, "--") == 0)) {
                 // ++!a ou --!a
                 found_x3 = 1;
+                // Semantic: Check if variable is numeric for increment/decrement
+                // Assuming the variable is at j-1
+                Token *var_to_check = token_list->tokens[j-1];
+                TokenType var_type = semantic_get_variable_type(var_list, var_to_check);
+                if (var_type != TIPO_INTEIRO && var_type != TIPO_DECIMAL) {
+                    printf("[ERRO SEMANTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", var_to_check->word, var_to_check->line);
+                }
             }
 
             j++;

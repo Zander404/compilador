@@ -58,6 +58,7 @@ typedef enum {
 
 
     TK_DELIM,
+    TK_UNKNOWN, // Added for semantic analysis
     TK_ERROR
 
 } TokenType;

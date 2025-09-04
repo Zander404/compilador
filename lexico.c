@@ -115,6 +115,12 @@ void destroy_token_list(TokenList *list) {
     FREE(list);
 }
 
+void destroy_token_list_without_tokens(TokenList *list) {
+    if (list == NULL) return;
+    FREE(list->tokens);
+    FREE(list);
+}
+
 /* Imprimir a Tabela de TOKENS (Todos os elementos reconhecido dado a regras) */
 void print_token_list(TokenList *list) {
     size_t i;
@@ -146,7 +152,7 @@ void print_token_list(TokenList *list) {
 
 
 /* Criar Token para coloca na Tabela de TokenList */
-static Token* create_new_token(TokenType type, const char* word, int num_line) {
+Token* create_new_token(TokenType type, const char* word, int num_line) {
     Token *token = (Token*)MALLOC(sizeof(Token));
     if (token == NULL) {
         perror("Erro ao alocar novo token");
@@ -175,7 +181,7 @@ void checkVariable(const char* word, int num_line, TokenList *list){
 
 /* Verificar Função */
 void checkFunction(const char* word, int num_line, TokenList *list){
-    Token *token = create_new_token(TK_FUNCAO, word, num_line);
+    Token *token = create_new_token(TK_IDENTIFICADOR, word, num_line); // Function names are identifiers
     if (token == NULL) return;
     add_token_to_list(list, token);
 }
