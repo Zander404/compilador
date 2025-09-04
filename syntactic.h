@@ -2,28 +2,8 @@
 #define SYNTACTIC_H
 
 #include "tokens.h"
-#include "syntactic.h"
-
-
-/* STRUCT para VAR */
-typedef struct {
-    char *name;
-    TokenType type;
-    int line;
-    union {
-        long int_val;
-        double dec_val;
-        char *str_val;
-    } value;
-    int initialized;
-} Variable;
-
-/* STRUCT */
-typedef struct {
-    Variable **vars;
-    size_t count;   
-    size_t capacity; 
-} VarList;
+#include "symbol_table.h"
+#include "lexico.h"
 
 
 #define MAX_VARIABLES 128

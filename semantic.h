@@ -49,4 +49,7 @@ int semantic_check_variable_initialized(VarList *var_list, Token *var_token);
 // Funções auxiliares
 Variable *find_variable_in_list(VarList *var_list, const char *name);
 
+// Helper function to convert TokenType to string for printing
+const char *token_type_to_string(TokenType type);
+
 #endif

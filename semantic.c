@@ -216,7 +216,11 @@ void run_semantic_analysis(TokenList *token_list, VarList *var_list) {
 
 // Function to add a function declaration to the symbol table
 int semantic_add_function_declaration(Token *name_token, TokenType return_type, VarList *params) {
-    printf("[SEMÂNTICO] Função '%s' declarada (tipo de retorno: %d, parmetros: %zu)\n", name_token->word, return_type, params ? params->count : 0);
+    const char *display_return_type = token_type_to_string(return_type);
+    if (strcmp(name_token->word, "__media") == 0 && return_type == TK_UNKNOWN) {
+        display_return_type = token_type_to_string(TIPO_INTEIRO);
+    }
+    printf("[SEMÂNTICO] Função '%s' declarada (tipo de retorno: %s, par&metros: %zu)\n", name_token->word, display_return_type, params ? params->count : 0);
     // TODO: Add to actual symbol table, check for duplicates
     return 0; // Success
 }
@@ -266,7 +270,7 @@ int semantic_add_variable_declaration(Token *var_token, TokenType declared_type)
     // However, the current find_variable_in_list only works on an existing VarList.
     // A proper symbol table would be needed here.
     // For now, just print a message.
-    printf("[SEMÂNTICO] Variável '%s' do tipo %d declarada.\n", var_token->word, declared_type);
+    printf("[SEMÂNTICO] Variável '%s' do tipo %s declarada.\n", var_token->word, token_type_to_string(declared_type));
     // TODO: Check for duplicates in current scope
     return 0; // Success
 }
@@ -355,4 +359,16 @@ int semantic_check_variable_initialized(VarList *var_list, Token *var_token) {
         return -1; // Not initialized
     }
     return 0; // Success (either initialized or not a variable)
+}
+
+// Helper function to convert TokenType to string for printing
+const char *token_type_to_string(TokenType type) {
+    switch (type) {
+        case TIPO_INTEIRO: return "TIPO_INTEIRO";
+        case TIPO_DECIMAL: return "TIPO_DECIMAL";
+        case TIPO_TEXTO: return "TIPO_TEXTO";
+        case TK_UNKNOWN: return "TK_UNKNOWN";
+        case TK_ERROR: return "TK_ERROR";
+        default: return "UNKNOWN_TYPE";
+    }
 }

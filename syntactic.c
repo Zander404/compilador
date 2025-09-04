@@ -13,6 +13,7 @@
 #include "semantic.h" // Added for semantic function declarations
 #include "ascii_table.h"
 #include "tokens.h"
+#include "symbol_table.h"
 
 
 
@@ -31,58 +32,6 @@ char *strdup(const char *s) {
 
 
 /* --- Funções para Lidar com a Pilha de TOKEN_LIST --- */
-VarList* create_var_list() {
-    VarList *list = (VarList*)MALLOC(sizeof(VarList));
-    if (list == NULL) {
-        perror("Erro ao alocar TokenList");
-        return NULL;
-    }
-    list->count = 0;
-    list->capacity = 10;
-    list->vars = (Variable**)MALLOC(sizeof(Variable*) * list->capacity);
-    if (list->vars == NULL) {
-        perror("Erro ao alocar array de Variaveis na lista");
-        FREE(list);
-        return NULL;
-    }
-    return list;
-}
-
-
-void add_var_to_list(VarList *list, Variable *var) {
-    if (list == NULL || var == NULL) return;
-
-    if (list->count == list->capacity) {
-        list->capacity *= 2;
-
-        Variable **new_vars = (Variable**)realloc(list->vars, sizeof(Variable*) * list->capacity);
-        if (new_vars == NULL) {
-            perror("Erro ao realocar lista de variveis");
-
-            FREE(var->name);
-            FREE(var);
-            return;
-        }
-        list->vars = new_vars;
-    }
-
-    list->vars[list->count++] = var;
-}
-
-
-void destroy_var_list(VarList *list) {
-    size_t i;
-    if (list == NULL) return;
-
-    for (i = 0; i < list->count; i++) {
-        if (list->vars[i] != NULL) {
-            FREE(list->vars[i]->name);
-            FREE(list->vars[i]);
-        }
-    }
-    FREE(list->vars);
-    FREE(list);
-}
 
 
 
@@ -144,47 +93,6 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
 }
 
 /* Imprime tabela de variáveis */
-void print_variables(VarList *list) {
-    size_t i;
-    if (list == NULL) {
-        printf("Lista de Variaveis vazia ou nula.\n");
-        return;
-    }
-
-    printf("\n--- Lista de Variaveis (%zu variaveis) ---\n", list->count);
-    for (i = 0; i < list->count; i++) {
-        Variable *t = list->vars[i];
-        if (t == NULL) {
-            printf("[%3zu] <NULL TOKEN>\n", i);
-            continue;
-        }
-       
-        printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string_name(t->type), t->name);
-        
-       
-        if (t->type == TIPO_INTEIRO) {
-            printf(" (Valor Inteiro: %ld)", t->value.int_val);
-        } else if (t->type == TIPO_DECIMAL) {
-            printf(" (Valor Decimal: %lf)", t->value.dec_val);
-        }else if( t->type == TIPO_TEXTO){
-            printf(" (Valor Textual: %s)", t->value.str_val);
-        }
-        printf("\n");
-    }
-    printf("-------------------------------------------\n");
-}
-
-
-Variable *find_variable(VarList *list, const char *name) {
-    if (!list) return NULL;
-
-    for (size_t i = 0; i < list->count; i++) {
-        if (list->vars[i] && strcmp(list->vars[i]->name, name) == 0) {
-            return list->vars[i];
-        }
-    }
-    return NULL; // não encontrada
-}
 
 void set_variable_int(VarList *list, const char *name, long value) {
     Variable *var = find_variable(list, name);
@@ -759,7 +667,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
                 // Original logic for string literal assignment
                 Token *valueToken = token_list->tokens[i+3]; // Adjusted index for valueToken
-                printf("%s", valueToken->word); // Keep original print
+                
                 semicolon = token_list->tokens[i+4]; // Adjusted index for semicolon
 
                 if (valueToken && valueToken->type == TK_STRING) {
