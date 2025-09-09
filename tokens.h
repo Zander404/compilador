@@ -84,4 +84,6 @@ typedef struct {
 extern const ReservedWord reserved_words[];
 extern const ReservedWord VALID_OPERATORS[];
 
+const char* token_type_to_string(TokenType type);
+
 #endif

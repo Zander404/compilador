@@ -2,7 +2,6 @@
 #define SYMBOL_TABLE_H
 
 #include <stddef.h>
-#include "tokens.h"
 #include "lexico.h"
 
 /* STRUCT para VAR */
@@ -39,13 +38,6 @@ typedef struct {
     size_t capacity;
 } FunctionList;
 
-/* Funções para Lista de Tokens */
-TokenList* create_token_list();
-void add_token_to_list(TokenList *list, Token *token);
-void destroy_token_list(TokenList *list);
-void destroy_token_list_without_tokens(TokenList *list);
-void print_token_list(TokenList *list);
-Token* create_new_token(TokenType type, const char* word, int num_line);
 
 /* Funções para VarList */
 VarList* create_var_list();
@@ -59,6 +51,5 @@ FunctionList* create_function_list();
 void add_function_to_list(FunctionList *list, Function *func);
 Function* find_function(FunctionList *list, const char *name);
 void destroy_function_list(FunctionList *list);
-const char* token_type_to_string_name(TokenType type);
 
 #endif

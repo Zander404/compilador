@@ -14,22 +14,14 @@ int main(){
   VarList *var_list = NULL;
   int balance_status = 0; 
   
-  /* Alocar um vetor de memoria com o tamanho da nossa memoria definida em memory_controller.h */
-  memory_buffer = (char*)malloc(MEMORY_SIZE);
-  if(memory_buffer == NULL){
-    perror("Erro ao alocar 2MB de memória");
-    return EXIT_FAILURE;
-  }
-
-
-  printf("Memória de %d MB alocada com sucesso. \n", MEMORY_SIZE / (1024 * 1024));
-  
   /* Carregar o programa para a memoria */
-  if(load_file_to_memory("./programa1.txt", memory_buffer, MEMORY_SIZE) == NULL){
-    FREE(memory_buffer);
+  size_t file_size;
+  memory_buffer = read_file_and_alloc("./programa1.txt", &file_size);
+  if(memory_buffer == NULL){
     return EXIT_FAILURE;
   }
   printf("Arquivo 'programa1.txt' carregando para a memória .\n");
+
 
 
   /* Criar a Tabela de Token */
@@ -104,7 +96,7 @@ int main(){
 
   /*Liberar a Memória, quando a execução terminar */ 
   if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
-  if(var_list != NULL){ FREE(var_list); printf("Lista de Variaveis do programa liberada.\n"); }
+  if(var_list != NULL){ destroy_var_list(var_list); printf("Lista de Variaveis do programa liberada.\n"); }
 
   print_memory_report();
   

@@ -24,7 +24,6 @@ void print_token_list(TokenList *list);
 
 /* Funções do controle LEXICO */
 void checkLine(const char *line, int num_line, TokenList *list);
-const char* token_type_to_string_name(TokenType type);
 void checkVariable(const char* word, int num_line, TokenList *list);
 void checkFunction(const char* word, int num_line, TokenList *list);
 void checkReservedWord(const char* word, int num_line, TokenList *list);
@@ -32,6 +31,5 @@ void checkNumber(const char *word, int num_line, TokenList *list);
 void checkString(const char *word, int num_line, TokenList *list);
 void checkOperator(const char *word, int num_line, TokenList *list);
 Token* create_new_token(TokenType type, const char* word, int num_line); 
-void invalidToken();
 
 #endif

@@ -2,26 +2,16 @@
 #include <string.h>
 #include "semantic.h"
 #include "syntactic.h"
+#include "symbol_table.h"
 
-/* Procura variável na lista */
-Variable *find_variable_in_list(VarList *var_list, const char *name) {
-    if (!var_list || !name) return NULL;
-    size_t i = 0;
-    for (i; i < var_list->count; i++) {
-        if (var_list->vars[i] && strcmp(var_list->vars[i]->name, name) == 0) {
-            return var_list->vars[i];
-        }
-    }
-    return NULL;
-}
 
 /* Checa se variável foi declarada */
 void check_variable_declaration(VarList *var_list, Token *token) {
     if (!token) return;
 
-    Variable *var = find_variable_in_list(var_list, token->word);
+    Variable *var = find_variable(var_list, token->word);
     if (!var) {
-        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada (linha %d)\n", token->word, token->line);
+        printf("[ERRO SEMÂNTICO] Variável \'%s\' não declarada (linha %d)\n", token->word, token->line);
     }
 }
 
@@ -29,9 +19,9 @@ void check_variable_declaration(VarList *var_list, Token *token) {
 void check_variable_initialized(VarList *var_list, Token *token) {
     if (!token) return;
 
-    Variable *var = find_variable_in_list(var_list, token->word);
+    Variable *var = find_variable(var_list, token->word);
     if (var && !var->initialized) {
-        printf("[ERRO SEMÂNTICO] Variável '%s' não inicializada (linha %d)\n", token->word, token->line);
+        printf("[ERRO SEMÂNTICO] Variável \'%s\' não inicializada (linha %d)\n", token->word, token->line);
     }
 }
 
@@ -44,7 +34,7 @@ int check_type_compatibility(VarList *var_list, Token *var_token, TokenList *tok
     TokenType expression_type;
     if (start == end) { /* Expressão de literais e variaveis simples */
         if (value_token->type == TK_VARIAVEL) {
-            Variable *var = find_variable_in_list(var_list, value_token->word);
+            Variable *var = find_variable(var_list, value_token->word);
             expression_type = var ? var->type : TK_UNKNOWN;
         } else {
             expression_type = value_token->type;
@@ -53,7 +43,7 @@ int check_type_compatibility(VarList *var_list, Token *var_token, TokenList *tok
         expression_type = evaluate_expression_type(var_list, token_list, start, end);
     }
 
-    Variable *var = find_variable_in_list(var_list, var_token->word);
+    Variable *var = find_variable(var_list, var_token->word);
     if (!var) return 0; 
 
     int compatible = 0;
@@ -74,10 +64,10 @@ int check_type_compatibility(VarList *var_list, Token *var_token, TokenList *tok
     }
 
     if (!compatible) {
-        printf("[ERRO SEMÂNTICO] Tipo incompatível para '%s' (linha %d). Esperado: %s, Encontrado: %s\n",
+        printf("[ERRO SEMÂNTICO] Tipo incompatível para \'%s\' (linha %d). Esperado: %s, Encontrado: %s\n",
                var->name, var_token->line,
-               token_type_to_string_name(var->type),
-               token_type_to_string_name(expression_type));
+               token_type_to_string(var->type),
+               token_type_to_string(expression_type));
         return 1; 
     }
 
@@ -110,7 +100,7 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
 
             TokenType type1 = TK_UNKNOWN;
             if (var1_token->type == TK_VARIAVEL) {
-                Variable *var = find_variable_in_list(var_list, var1_token->word);
+                Variable *var = find_variable(var_list, var1_token->word);
                 if (var) type1 = var->type;
             } else {
                 type1 = var1_token->type;
@@ -118,7 +108,7 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
 
             TokenType type2 = TK_UNKNOWN;
             if (var2_token->type == TK_VARIAVEL) {
-                Variable *var = find_variable_in_list(var_list, var2_token->word);
+                Variable *var = find_variable(var_list, var2_token->word);
                 if (var) type2 = var->type;
             } else {
                 type2 = var2_token->type;
@@ -138,7 +128,7 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
     if (start == end) {
         Token *token = token_list->tokens[start];
         if (token->type == TK_VARIAVEL) {
-            Variable *var = find_variable_in_list(var_list, token->word);
+            Variable *var = find_variable(var_list, token->word);
             return var ? var->type : TK_UNKNOWN;
         } else {
             return token->type;
@@ -149,58 +139,7 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
 }
 
 
-void run_semantic_analysis(TokenList *token_list, VarList *var_list) {
-    size_t i;
-    Token *current_token;
 
-    for (i = 0; i < token_list->count; i++) {
-        current_token = token_list->tokens[i];
-
-        if (current_token == NULL) {
-            continue;
-        }
-
-        /* Checa se a variavel foi iniciada ou não */
-        if (current_token->type == TK_VARIAVEL) {
-            if (i > 0) {
-                TokenType prev_type = token_list->tokens[i-1]->type;
-                if (prev_type == TIPO_INTEIRO || prev_type == TIPO_DECIMAL || prev_type == TIPO_TEXTO) {
-                    continue;
-                }
-            }
-            check_variable_declaration(var_list, current_token);
-            check_variable_initialized(var_list, current_token);
-        }
-
-        /* Checar para tipo de compatibilidade de atribuição */  
-        if (current_token->type == TK_OPERATOR_EQUAL) {
-            /* Garantir que antes do token tenha um sinal de = antes da expressão */ 
-            if (i > 0 && (i + 1) < token_list->count) {
-                Token *var_token = token_list->tokens[i-1];
-                /* Verficar se o token anterior e do tipo variavel e atribuir o valor a ele */ 
-                if (var_token->type == TK_VARIAVEL) {
-                    size_t expr_start = i + 1;
-                    size_t expr_end = expr_start;
-                    while (expr_end < token_list->count &&
-                           !(token_list->tokens[expr_end]->type == TK_DELIM &&
-                             strcmp(token_list->tokens[expr_end]->word, ";") == 0)) {
-                        expr_end++;
-                    }
-                    expr_end--; 
-
-                    if (check_type_compatibility(var_list, var_token, token_list, expr_start, expr_end)) {
-                        int error_line = current_token->line;
-                        while (i < token_list->count && token_list->tokens[i]->line == error_line) {
-                            i++; 
-                        }
-                        i--;
-                        continue;
-                    }
-                }
-            }
-        }
-    }
-}
 
 
 /* Função para adioncar declaralão de função na tabela de simbolos */
@@ -305,7 +244,7 @@ int semantic_check_comparison_type(VarList *var_list, Token *left_operand_token,
 
 /* Função para retornar o tipo da variavel da tabela de simbolos */
 TokenType semantic_get_variable_type(VarList *var_list, Token *var_token) {
-    Variable *var = find_variable_in_list(var_list, var_token->word);
+    Variable *var = find_variable(var_list, var_token->word);
     if (var) {
         return var->type;
     }
@@ -319,7 +258,7 @@ TokenType semantic_get_variable_type(VarList *var_list, Token *var_token) {
 
 /* Função para checar se a variavel foi declarada e inicializada */
 int semantic_check_variable_initialized(VarList *var_list, Token *var_token) {
-    Variable *var = find_variable_in_list(var_list, var_token->word);
+    Variable *var = find_variable(var_list, var_token->word);
     if (var && !var->initialized) {
         return -1; 
     }
@@ -327,13 +266,3 @@ int semantic_check_variable_initialized(VarList *var_list, Token *var_token) {
 }
 
 /* Função para converter o TokenType para string */
-const char *token_type_to_string(TokenType type) {
-    switch (type) {
-        case TIPO_INTEIRO: return "TIPO_INTEIRO";
-        case TIPO_DECIMAL: return "TIPO_DECIMAL";
-        case TIPO_TEXTO: return "TIPO_TEXTO";
-        case TK_UNKNOWN: return "TK_UNKNOWN";
-        case TK_ERROR: return "TK_ERROR";
-        default: return "UNKNOWN_TYPE";
-    }
-}

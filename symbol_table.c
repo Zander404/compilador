@@ -73,7 +73,7 @@ void print_variables(VarList *list) {
             continue;
         }
        
-        printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string_name(t->type), t->name);
+        printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string(t->type), t->name);
         
        
         if (t->type == TIPO_INTEIRO) {

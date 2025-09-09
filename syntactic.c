@@ -17,20 +17,6 @@
 
 
 
-Variable list[MAX_VARIABLES];
-int variable_count = 0;
-
-char *strdup(const char *s) {
-    size_t len = strlen(s) + 1;   /* tamanho da string + '\0' */
-    char *copy = (char *)malloc(len);
-    if (copy != NULL) {
-        memcpy(copy, s, len);
-    }
-    return copy;
-}
-
-
-
 /* --- Funções para Lidar com a Pilha de TOKEN_LIST --- */
 
 
@@ -90,38 +76,6 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
     }
   
     return var;
-}
-
-/* Imprime tabela de variáveis */
-
-void set_variable_int(VarList *list, const char *name, long value) {
-    Variable *var = find_variable(list, name);
-    if (!var) {
-        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
-        return;
-    }
-    var->value.int_val = value;
-    var->initialized = 1;
-}
-
-void set_variable_dec(VarList *list, const char *name, double value) {
-    Variable *var = find_variable(list, name);
-    if (!var) {
-        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
-        return;
-    }
-    var->value.dec_val = value;
-    var->initialized = 1;
-}
-
-void set_variable_str(VarList *list, const char *name, const char *value) {
-    Variable *var = find_variable(list, name);
-    if (!var) {
-        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada!\n", name);
-        return;
-    }
-    var->value.str_val = strdup(value);
-    var->initialized = 1;
 }
 
 void validate_declaration(TokenList *token_list, VarList *var_list){
