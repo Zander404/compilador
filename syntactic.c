@@ -32,6 +32,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
     var->type = type;
     var->name = STRDUP(token->word);
     var->initialized = 1;
+    var->is_valid = true; // Initialize as valid
 
     /* inicialização padrão (caso não tenha "valor") */
     switch (var->type) {
@@ -42,7 +43,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
           var->value.dec_val = 0.0;
           break;
       case TIPO_TEXTO:
-          var->value.str_val = NULL;
+          var->value.int_val = (long long)NULL;
           break;
       default:
           break;
@@ -59,7 +60,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
               break;
           case TIPO_TEXTO:
               if (value->value.str_val) {
-                  var->value.str_val = value->value.str_val;
+                  var->value.int_val = (long long)value->value.str_val;
               }
               break;
           default:

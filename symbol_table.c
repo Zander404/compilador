@@ -61,7 +61,7 @@ void destroy_var_list(VarList *list) {
 void print_variables(VarList *list) {
     size_t i;
     if (list == NULL) {
-        printf("Lista de Variaveis vazia ou nula.\n");
+        printf("Lista de Variaveis vazia ou nula.\n\n");
         return;
     }
 
@@ -72,7 +72,10 @@ void print_variables(VarList *list) {
             printf("[%3zu] <NULL TOKEN>\n", i);
             continue;
         }
-       
+        if (!t->is_valid) { // Only print if valid
+            continue;
+        }
+
         printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string(t->type), t->name);
         
        
@@ -81,7 +84,7 @@ void print_variables(VarList *list) {
         } else if (t->type == TIPO_DECIMAL) {
             printf(" (Valor Decimal: %lf)", t->value.dec_val);
         }else if( t->type == TIPO_TEXTO){
-            printf(" (Valor Textual: %s)", t->value.str_val);
+            printf(" (Valor Textual: %s)", (char*)t->value.int_val);
         }
         printf("\n");
     }

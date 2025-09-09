@@ -5,16 +5,19 @@
 #include "lexico.h"
 
 /* STRUCT para VAR */
+#include <stdbool.h>
+
 typedef struct {
     char *name;
     TokenType type;
     int line;
+    int initialized; // 0 for false, 1 for true
+    bool is_valid; // Added field
     union {
-        long int_val;
+        long long int_val;
         double dec_val;
-        char *str_val;
+        char *text_val;
     } value;
-    int initialized;
 } Variable;
 
 /* STRUCT de VarList */

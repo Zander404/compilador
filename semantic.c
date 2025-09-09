@@ -95,6 +95,19 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
         return evaluate_expression_type(var_list, token_list, start + 1, end - 1);
     }
 
+    /* Lidar com chamada de função (simplificado: apenas retorna o tipo da função) */
+    if (token_list->tokens[start]->type == TK_IDENTIFICADOR &&
+        start + 1 <= end && token_list->tokens[start + 1]->type == TK_DELIM && strcmp(token_list->tokens[start + 1]->word, "(") == 0) {
+
+        Token *function_name_token = token_list->tokens[start];
+        Function *func = find_function(global_function_table, function_name_token->word);
+        if (!func) {
+            printf("[ERRO SEMANTICO] Função '%s' não declarada (linha %d)\n", function_name_token->word, function_name_token->line);
+            return TK_UNKNOWN;
+        }
+        return func->return_type;
+    }
+
     /* Lida com comparação simples var OPERATOR var */ 
     if (end - start == 2) { 
         Token *var1_token = token_list->tokens[start];
@@ -176,12 +189,20 @@ int semantic_add_function_declaration(Token *name_token, TokenType return_type, 
     return 0;
 }
 
-/* Checar se a chamada da função é valida*/
+/* Checar se a chamada da função é valida e retornar seu tipo de retorno */
 TokenType semantic_validate_function_call(Token *name_token, TokenList *args_tokens) {
     size_t num_args = args_tokens ? (args_tokens->count + 1) / 2 : 0;
     printf("[SEMANTICO] Function '%s' foi chamada (args: %zu)\n", name_token->word, num_args);
 
-    return TK_FUNCAO; 
+    Function *func = find_function(global_function_table, name_token->word);
+    if (!func) {
+        printf("[ERRO SEMANTICO] Função '%s' não declarada (linha %d)\n", name_token->word, name_token->line);
+        return TK_UNKNOWN; // Or an appropriate error type
+    }
+
+    // TODO: Add argument type checking here against func->params
+
+    return func->return_type;
 }
 
 
@@ -213,6 +234,11 @@ int semantic_check_assignment_type(VarList *var_list, Token *var_token, Token *v
     if (!compatible) {
         printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d). Esperado: %s, Encontrado: %s\n",
                var_token->word, var_token->line, token_type_to_string(var_type), token_type_to_string(value_type));
+        // Get the variable and mark it as invalid
+        Variable *var = find_variable(var_list, var_token->word);
+        if (var) {
+            var->is_valid = false;
+        }
         return -1;
     }
     return 0; 
