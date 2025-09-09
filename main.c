@@ -6,6 +6,7 @@
 #include "syntactic.h"
 #include "parser.h"
 #include "memory_controller.h"
+#include "semantic.h"
 
 
 int main(){
@@ -40,6 +41,8 @@ int main(){
 
   printf("Lista de Tokens criado com sucesso. \n");
 
+  // Initialize semantic analysis components
+  semantic_init();
 
   char *current_pos = memory_buffer;
   int current_line_num = 1;

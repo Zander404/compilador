@@ -3,7 +3,19 @@
 #include "semantic.h"
 #include "syntactic.h"
 #include "symbol_table.h"
+#include "memory_controller.h"
 
+
+// Global function table
+FunctionList *global_function_table;
+
+void semantic_init() {
+    global_function_table = create_function_list();
+    if (global_function_table == NULL) {
+        perror("Failed to initialize global function table");
+        // Handle error appropriately, maybe exit
+    }
+}
 
 /* Checa se variável foi declarada */
 void check_variable_declaration(VarList *var_list, Token *token) {
@@ -71,7 +83,6 @@ int check_type_compatibility(VarList *var_list, Token *var_token, TokenList *tok
         return 1; 
     }
 
-   
     return 0;
 }
 
@@ -144,39 +155,33 @@ TokenType evaluate_expression_type(VarList *var_list, TokenList *token_list, siz
 
 /* Função para adioncar declaralão de função na tabela de simbolos */
 int semantic_add_function_declaration(Token *name_token, TokenType return_type, VarList *params) {
-    const char *display_return_type = token_type_to_string(return_type);
-    if (strcmp(name_token->word, "__media") == 0 && return_type == TK_UNKNOWN) {
-        display_return_type = token_type_to_string(TIPO_INTEIRO);
+    Function *new_func = (Function*)MALLOC(sizeof(Function));
+    if (new_func == NULL) {
+        perror("Failed to allocate new function");
+        return -1;
     }
-    printf("[SEMÂNTICO] Função '%s' declarada (tipo de retorno: %s, par&metros: %zu)\n", name_token->word, display_return_type, params ? params->count : 0);
-    return 0; 
+    new_func->name = STRDUP(name_token->word);
+    // Temporarily set return type for __media
+    if (strcmp(name_token->word, "__media") == 0) {
+        new_func->return_type = TIPO_INTEIRO;
+    } else {
+        new_func->return_type = return_type; // Use the passed return_type for others
+    }
+    new_func->params = params; // params list is passed, not copied
+
+    add_function_to_list(global_function_table, new_func);
+
+    const char *display_return_type = token_type_to_string(new_func->return_type); // Use new_func->return_type for display
+    printf("[SEMÂNTICO] Função \'%s\' declarada (tipo de retorno: %s, parametros: %zu)\n", name_token->word, display_return_type, params ? params->count : 0);
+    return 0;
 }
 
 /* Checar se a chamada da função é valida*/
 TokenType semantic_validate_function_call(Token *name_token, TokenList *args_tokens) {
     size_t num_args = args_tokens ? (args_tokens->count + 1) / 2 : 0;
-    printf("[SEMANTIC] Function '%s' called (args: %zu)\n", name_token->word, num_args);
+    printf("[SEMANTICO] Function '%s' foi chamada (args: %zu)\n", name_token->word, num_args);
 
-    /* Hardcoded validation for __media function */
-    if (strcmp(name_token->word, "__media") == 0) {
-        /* Check argument count */
-        if (num_args != 2) {
-            printf("[SEMANTIC ERROR] Function '__media' expected 2 arguments, but received %zu (line %d)\n",
-                   num_args, name_token->line);
-            return TK_ERROR;
-        }
-
-        /* Checar o tipo dos argumentos assumindo que ambos são inteiros */
-        if (args_tokens->tokens[0]->type != TK_NUM_INT || args_tokens->tokens[2]->type != TK_NUM_INT) {
-             printf("[SEMANTIC ERROR] Function '__media' expected integer arguments (line %d)\n", name_token->line);
-             return TK_ERROR; 
-        }
-
-       
-        return TIPO_INTEIRO; /* Retornar o tipo inteiro */ 
-    }
-
-    return TK_UNKNOWN; 
+    return TK_FUNCAO; 
 }
 
 
@@ -206,8 +211,8 @@ int semantic_check_assignment_type(VarList *var_list, Token *var_token, Token *v
     
 
     if (!compatible) {
-        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d). Esperado: %d, Encontrado: %d\n",
-               var_token->word, var_token->line, var_type, value_type);
+        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d). Esperado: %s, Encontrado: %s\n",
+               var_token->word, var_token->line, token_type_to_string(var_type), token_type_to_string(value_type));
         return -1;
     }
     return 0; 
@@ -266,3 +271,12 @@ int semantic_check_variable_initialized(VarList *var_list, Token *var_token) {
 }
 
 /* Função para converter o TokenType para string */
+void semantic_set_function_return_type(Token *function_name_token, TokenType actual_return_type) {
+    Function *func = find_function(global_function_table, function_name_token->word);
+    if (func) {
+        func->return_type = actual_return_type;
+        printf("[SEMÂNTICO] Tipo de retorno da função \'%s\' atualizado para %s.\n", function_name_token->word, token_type_to_string(actual_return_type));
+    } else {
+        printf("[ERRO SEMANTICO] Função \'%s\' não encontrada para atualizar tipo de retorno (linha %d).\n", function_name_token->word, function_name_token->line);
+    }
+}

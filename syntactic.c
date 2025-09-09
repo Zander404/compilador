@@ -45,7 +45,6 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
           var->value.str_val = NULL;
           break;
       default:
-          printf("[ERRO SEMÂNTICO] Tipo inválido ao criar variável.\n");
           break;
     }
 
@@ -207,7 +206,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
         /* Depois de fazer o parsin dos parametros, chamar a função semantica para adionar a declaração de função */ 
         if (semantic_add_function_declaration(name, TK_UNKNOWN, function_params) != 0) {
-            printf("[ERRO SEMANTICO] Erro ao declarar função '%s' (linha %d)\n", name->word, name->line);
+            printf("[ERRO SEMÂNTICO] Erro ao declarar função '%s' (linha %d)\n", name->word, name->line);
         }
         destroy_var_list(function_params); /* Limpar a lista temporaria */
 
@@ -242,13 +241,13 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         while (i < token_list->count) {
             Token *varToken = token_list->tokens[i];
             if (!varToken || varToken->type != TK_VARIAVEL) {
-                printf("[ERRO] Esperado variável após tipo 'inteiro' (linha %d)\n", t->line);
+                printf("[ERRO SINTATICO] Esperado variável após tipo 'inteiro' (linha %d)\n", t->line);
                 break;
             }
 
             /* Adionar a declaração de varivavel */
             if (semantic_add_variable_declaration(varToken, TIPO_INTEIRO) != 0) {
-                printf("[ERRO SEMANTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
+                printf("[ERRO SEMÂNTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
             }
 
             Token *nextToken = token_list->tokens[i+1];
@@ -324,22 +323,19 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     }
                 }
 
-                /* Logica para adiconar token de Inteiro */ 
-                Token *valueToken = token_list->tokens[i+2];
-                if (valueToken && valueToken->type == TK_NUM_INT) {
-                    var = create_new_var(TIPO_INTEIRO, varToken, valueToken, t->line);
-                    add_var_to_list(var_list, var);
+                /* Logica para adiconar token de Inteiro */
+                Token *valueToken = token_list->tokens[i+2]; // This can be any literal or variable
 
-                    /* Semantica: Checar o tipo de atribuição de tipo */ 
-                    if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
-                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
-                    }
+                // Create variable with initialization, semantic_check_assignment_type will validate type
+                var = create_new_var(TIPO_INTEIRO, varToken, valueToken, t->line);
+                add_var_to_list(var_list, var);
 
-                    i += 3;
-                } else {
-                    printf("[ERRO] Esperado número inteiro após '=' (linha %d)\n", t->line);
-                    i += 2;
+                /* Semantica: Checar o tipo de atribuição de tipo */
+                if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
+                    // Error message is already printed by semantic_check_assignment_type
                 }
+
+                i += 3; // Consume var, =, and valueToken
             } else {
 
                 var = create_new_var(TIPO_INTEIRO, varToken, NULL, t->line);
@@ -356,7 +352,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
             } else if (sep && sep->type == TK_DELIM && strcmp(sep->word, ";") == 0) {
                 break;
             } else {
-                printf("[ERRO] Esperado ',' ou ';' após declaração (linha %d)\n", t->line);
+                printf("[ERRO SINTATICO] Esperado ',' ou ';' após declaração (linha %d)\n", t->line);
                 break;
             }
         }
@@ -369,7 +365,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         if (varToken && varToken->type == TK_VARIAVEL) {
             /* Semantic: Adicionar o token a lista */
             if (semantic_add_variable_declaration(varToken, TIPO_DECIMAL) != 0) {
-                printf("[ERRO SEMANTICO] Erro ao declarar variável \'%s\' (linha %d)\
+                printf("[ERRO SEMÂNTICO] Erro ao declarar variável \'%s\' (linha %d)\
 ", varToken->word, varToken->line);
             }
             Token *nextToken = token_list->tokens[i+2];
@@ -459,12 +455,12 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
                     /* Semantica: Avaliara a atribuição */ 
                     if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
-                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                        printf("[ERRO SEMÂNTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
                     }
 
                     i += 3;
                 } else {
-                    printf("[ERRO] Esperado número decimal ou inteiro após '=' (linha %d)\n", t->line);
+                    printf("[ERRO SINTATICO] Esperado número decimal ou inteiro após '=' (linha %d)\n", t->line);
                     i += 2;
                 }
             }
@@ -484,7 +480,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                             add_var_to_list(var_list, var);
 
                             if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
-                                printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                                printf("[ERRO SEMÂNTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
                             }
                         } else {
                             printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
@@ -497,7 +493,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                         continue;
                     }
                 } else {
-                    printf("[ERRO SEMANTICO] Valor inválido dentro do array (linha %d)\n", t->line);
+                    printf("[ERRO SEMÂNTICO] Valor inválido dentro do array (linha %d)\n", t->line);
                     i += 3;
                     continue;
                 }
@@ -518,7 +514,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         if (varToken && varToken->type == TK_VARIAVEL) {
             /* Adicionar o token a lista */
             if (semantic_add_variable_declaration(varToken, TIPO_TEXTO) != 0) {
-                printf("[ERRO SEMANTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
+                printf("[ERRO SEMÂNTICO] Erro ao declarar variável '%s' (linha %d)\n", varToken->word, varToken->line);
             }
             Token *nextToken = token_list->tokens[i+2];
             Token *valueToken = NULL;
@@ -607,7 +603,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
 
                         /* Checar Tipagem Semantica */
                         if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
-                            printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
+                            printf("[ERRO SEMÂNTICO] Atribuição de tipo incompatível para '%s' (linha %d)\n", varToken->word, varToken->line);
                         }
                     } else {
                         printf("[ERRO SINTATICO] Falta ';' no final da declaração (linha %d)\n", t->line);
@@ -661,7 +657,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 if (arg->type == TK_VARIAVEL) {
                     /* Semantica: Checar se a variavel foi declarada */ 
                     if (semantic_get_variable_type(var_list, arg) == TK_UNKNOWN) {
-                        printf("[ERRO SEMANTICO] Variável '%s' não declarada em 'leia' (linha %d)\n", arg->word, arg->line);
+                        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada em 'leia' (linha %d)\n", arg->word, arg->line);
                     }
                 }else {
                     printf("[ERRO SEMÂNTICO] Argumento inválido em 'leia' (linha %d)\n", arg->line);
@@ -718,16 +714,16 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     /* Semantica: Verificar se a variavel foi declarada */
                     TokenType var_type = semantic_get_variable_type(var_list, arg);
                     if (var_type == TK_UNKNOWN) {
-                        printf("[ERRO SEMANTICO] Variável '%s' não declarada em 'escreva' (linha %d)\n", arg->word, arg->line);
+                        printf("[ERRO SEMÂNTICO] Variável '%s' não declarada em 'escreva' (linha %d)\n", arg->word, arg->line);
                     } else {
                         /* Semantic: Checar se a variavel foi declarada */
                         if (semantic_check_variable_initialized(var_list, arg) != 0) {
-                            printf("[ERRO SEMANTICO] Variável '%s' usada sem inicialização em 'escreva' (linha %d)\n", arg->word, arg->line);
+                            printf("[ERRO SEMÂNTICO] Variável '%s' usada sem inicialização em 'escreva' (linha %d)\n", arg->word, arg->line);
                         }
                     }
                 }
                 else {
-                    printf("[ERRO SEMANTICO] Argumento inválido em 'escreva' (linha %d)\n", arg->line);
+                    printf("[ERRO SEMÂNTICO] Argumento inválido em 'escreva' (linha %d)\n", arg->line);
                 }
                 expect_arg = 0;
             } 
@@ -778,9 +774,9 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
               if (arg->type == TK_VARIAVEL) {
                   Variable *var = find_variable(var_list, arg->word);
                   if (!var) {
-                      printf("[ERRO SEMANTICO] Variável '%s' não declarada (linha %d)\n", arg->word, arg->line);
+                      printf("[ERRO SEMÂNTICO] Variável '%s' não declarada (linha %d)\n", arg->word, arg->line);
                   } else if (!var->initialized) {
-                      printf("[ERRO SEMANTICO] Variável '%s' usada sem inicialização (linha %d)\n", arg->word, arg->line);
+                      printf("[ERRO SEMÂNTICO] Variável '%s' usada sem inicialização (linha %d)\n", arg->word, arg->line);
                   }
               }
 
@@ -793,7 +789,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                   Token *left_operand = token_list->tokens[j-1];
                   Token *right_operand = token_list->tokens[j+1];
                   if (semantic_check_comparison_type(var_list, left_operand, arg, right_operand) != 0) {
-                      printf("[ERRO SEMANTICO] Tipos incompatíveis na comparação (linha %d)\n", arg->line);
+                      printf("[ERRO SEMÂNTICO] Tipos incompatíveis na comparação (linha %d)\n", arg->line);
                   }
               }
 
@@ -866,7 +862,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                         Token *var_to_assign = arg;
                         Token *value_assigned = token_list->tokens[j+2];
                         if (semantic_check_assignment_type(var_list, var_to_assign, value_assigned) != 0) {
-                            printf("[ERRO SEMANTICO] Atribuição de tipo incompatível em PARA (linha %d)\n", arg->line);
+                            printf("[ERRO SEMÂNTICO] Atribuição de tipo incompatível em PARA (linha %d)\n", arg->line);
                         }
                         j += 2;
                         continue;
@@ -910,7 +906,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 Token *left_operand = token_list->tokens[j-1];
                 Token *right_operand = token_list->tokens[j+1];
                 if (semantic_check_comparison_type(var_list, left_operand, arg, right_operand) != 0) {
-                    printf("[ERRO SEMANTICO] Tipos incompatíveis na condição PARA (linha %d)\n", arg->line);
+                    printf("[ERRO SEMÂNTICO] Tipos incompatíveis na condição PARA (linha %d)\n", arg->line);
                 }
             }
 
@@ -918,7 +914,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
         }
 
         if (!found_x2) {
-            printf("[ERRO SEMANTICO] Condição inválida em PARA (linha %d)\n", t->line);
+            printf("[ERRO SEMÂNTICO] Condição inválida em PARA (linha %d)\n", t->line);
         }
 
         /* ============================
@@ -944,7 +940,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     /* Semantica: Checar se variavel e numerica para incrementar/decrementar */ 
                     TokenType var_type = semantic_get_variable_type(var_list, arg);
                     if (var_type != TIPO_INTEIRO && var_type != TIPO_DECIMAL) {
-                        printf("[ERRO SEMANTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", arg->word, arg->line);
+                        printf("[ERRO SEMÂNTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", arg->word, arg->line);
                     }
                     j += 2;
                     continue;
@@ -956,7 +952,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                     Token *var_to_assign = arg;
                     Token *value_assigned = token_list->tokens[j+2]; /* Asumindo simples atribuição, como a = b */
                     if (semantic_check_assignment_type(var_list, var_to_assign, value_assigned) != 0) {
-                        printf("[ERRO SEMANTICO] Atribuição de tipo incompatível em incremento PARA (linha %d)\n", arg->line);
+                        printf("[ERRO SEMÂNTICO] Atribuição de tipo incompatível em incremento PARA (linha %d)\n", arg->line);
                     }
                 }
             }
@@ -969,7 +965,7 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 Token *var_to_check = token_list->tokens[j-1];
                 TokenType var_type = semantic_get_variable_type(var_list, var_to_check);
                 if (var_type != TIPO_INTEIRO && var_type != TIPO_DECIMAL) {
-                    printf("[ERRO SEMANTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", var_to_check->word, var_to_check->line);
+                    printf("[ERRO SEMÂNTICO] Operador de incremento/decremento inválido para tipo \'%s\' (linha %d)\n", var_to_check->word, var_to_check->line);
                 }
             }
 
