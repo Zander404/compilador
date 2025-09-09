@@ -181,7 +181,7 @@ void checkVariable(const char* word, int num_line, TokenList *list){
 
 /* Verificar Função */
 void checkFunction(const char* word, int num_line, TokenList *list){
-    Token *token = create_new_token(TK_IDENTIFICADOR, word, num_line); // Function names are identifiers
+    Token *token = create_new_token(TK_IDENTIFICADOR, word, num_line); 
     if (token == NULL) return;
     add_token_to_list(list, token);
 }

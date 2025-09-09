@@ -4,9 +4,8 @@
 #include "symbol_table.h"
 #include "memory_controller.h"
 
-// --- TokenList Functions ---
 
-// --- VarList Functions ---
+/* --- VarList Functions --- */
 
 VarList* create_var_list() {
     VarList *list = (VarList*)MALLOC(sizeof(VarList));
@@ -91,17 +90,16 @@ void print_variables(VarList *list) {
 
 Variable *find_variable(VarList *list, const char *name) {
     if (!list) return NULL;
-
-    for (size_t i = 0; i < list->count; i++) {
+    size_t i = 0;
+    for (i; i < list->count; i++) {
         if (list->vars[i] && strcmp(list->vars[i]->name, name) == 0) {
             return list->vars[i];
         }
     }
-    return NULL; // não encontrada
+    return NULL; /* não encontrada */
 }
 
-// --- FunctionList Functions ---
-
+/* --- Lista de Funções --- */
 FunctionList* create_function_list() {
     FunctionList *list = (FunctionList*)MALLOC(sizeof(FunctionList));
     if (list == NULL) {
@@ -141,13 +139,13 @@ void add_function_to_list(FunctionList *list, Function *func) {
 
 Function* find_function(FunctionList *list, const char *name) {
     if (!list) return NULL;
-
-    for (size_t i = 0; i < list->count; i++) {
+    size_t i = 0; 
+    for (i; i < list->count; i++) {
         if (list->functions[i] && strcmp(list->functions[i]->name, name) == 0) {
             return list->functions[i];
         }
     }
-    return NULL; // não encontrada
+    return NULL; /* não encontrada */
 }
 
 void destroy_function_list(FunctionList *list) {

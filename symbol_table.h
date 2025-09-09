@@ -18,28 +18,28 @@ typedef struct {
     int initialized;
 } Variable;
 
-/* STRUCT */
+/* STRUCT de VarList */
 typedef struct {
     Variable **vars;
     size_t count;
     size_t capacity;
 } VarList;
 
-// Represents a function in the symbol table
+/* Struct de Função */
 typedef struct {
     char *name;
     TokenType return_type;
-    VarList *params; // List of parameters
+    VarList *params; /* Lista de Variaveis */
 } Function;
 
-// List of functions
+/* Struct para a Lista de Função*/
 typedef struct {
     Function **functions;
     size_t count;
     size_t capacity;
 } FunctionList;
 
-// TokenList functions
+/* Funções para Lista de Tokens */
 TokenList* create_token_list();
 void add_token_to_list(TokenList *list, Token *token);
 void destroy_token_list(TokenList *list);
@@ -47,14 +47,14 @@ void destroy_token_list_without_tokens(TokenList *list);
 void print_token_list(TokenList *list);
 Token* create_new_token(TokenType type, const char* word, int num_line);
 
-// VarList functions
+/* Funções para VarList */
 VarList* create_var_list();
 void add_var_to_list(VarList *list, Variable *var);
 void destroy_var_list(VarList *list);
 void print_variables(VarList *list);
 Variable *find_variable(VarList *list, const char *name);
 
-// FunctionList functions
+/* Função para Lista de FunctionList */ 
 FunctionList* create_function_list();
 void add_function_to_list(FunctionList *list, Function *func);
 Function* find_function(FunctionList *list, const char *name);

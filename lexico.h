@@ -31,7 +31,7 @@ void checkReservedWord(const char* word, int num_line, TokenList *list);
 void checkNumber(const char *word, int num_line, TokenList *list);
 void checkString(const char *word, int num_line, TokenList *list);
 void checkOperator(const char *word, int num_line, TokenList *list);
-Token* create_new_token(TokenType type, const char* word, int num_line); // Added for external linkage
+Token* create_new_token(TokenType type, const char* word, int num_line); 
 void invalidToken();
 
 #endif
