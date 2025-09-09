@@ -58,6 +58,7 @@ typedef enum {
 
 
     TK_DELIM,
+    TK_UNKNOWN,
     TK_ERROR
 
 } TokenType;
@@ -70,6 +71,7 @@ typedef struct {
     union {
         long int_val;
         double dec_val;
+        char *str_val;
     } value;
 } Token;
 
@@ -81,5 +83,7 @@ typedef struct {
 
 extern const ReservedWord reserved_words[];
 extern const ReservedWord VALID_OPERATORS[];
+
+const char* token_type_to_string(TokenType type);
 
 #endif

@@ -17,50 +17,6 @@ extern const ReservedWord reserved_words[];
 extern const ReservedWord VALID_OPERATORS[];
 
 
-
-/* Converter o TOKEN para sua Representação em String */
-static const char* token_type_to_string_name(TokenType type) {
-    switch (type) {
-        case TK_PRINCIPAL: return "TK_PRINCIPAL";
-        case TK_FUNCAO: return "TK_FUNCAO";
-        case TK_RETORNO: return "TK_RETORNO";
-        case TK_LEIA: return "TK_LEIA";
-        case TK_ESCREVA: return "TK_ESCREVA";
-        case TK_SE: return "TK_SE";
-        case TK_SENAO: return "TK_SENAO";
-        case TK_PARA: return "TK_PARA";
-        case TIPO_INTEIRO: return "TIPO_INTEIRO";
-        case TIPO_DECIMAL: return "TIPO_DECIMAL";
-        case TIPO_TEXTO: return "TIPO_TEXTO";
-        case TK_IDENTIFICADOR: return "TK_IDENTIFICADOR";
-        case TK_VARIAVEL: return "TK_VARIAVEL";
-        case TK_OPERATOR: return "TK_OPERATOR";
-        case TK_NUM_INT: return "TK_NUM_INT";
-        case TK_NUM_DEC: return "TK_NUM_DEC";
-        case TK_STRING: return "TK_STRING";
-        case TK_OPERATOR_SUM: return "TK_OPERATOR_SUM";
-        case TK_OPERATOR_MINUS: return "TK_OPERATOR_MINUS";
-        case TK_OPERATOR_MULT: return "TK_OPERATOR_MULT";
-        case TK_OPERATOR_MORE: return "TK_OPERATOR_MORE";
-        case TK_OPERATOR_LESS: return "TK_OPERATOR_LESS";
-        case TK_OPERATOR_DIV: return "TK_OPERATOR_DIV";
-        case TK_OPERATOR_POT: return "TK_OPERATOR_POT";
-        case TK_OPERATOR_EQUAL: return "TK_OPERATOR_EQUAL";
-        case TK_OPERATOR_SAME: return "TK_OPERATOR_SAME";
-        case TK_OPERATOR_DIFF: return "TK_OPERATOR_DIFF";
-        case TK_OPERATOR_LT: return "TK_OPERATOR_LT";
-        case TK_OPERATOR_LTE: return "TK_OPERATOR_LTE";
-        case TK_OPERATOR_GT: return "TK_OPERATOR_GT";
-        case TK_OPERATOR_GTE: return "TK_OPERATOR_GTE";
-        case TK_OPERATOR_AND: return "TK_OPERATOR_AND";
-        case TK_OPERATOR_OR: return "TK_OPERATOR_OR";
-        case TK_DELIM: return "TK_DELIM";
-        case TK_ERROR: return "TK_ERROR";
-        default: return "UNKNOWN_TYPE";
-    }
-}
-
-
 /* --- Funções para Lidar com a Pilha de TOKEN_LIST --- */
 TokenList* create_token_list() {
     TokenList *list = (TokenList*)MALLOC(sizeof(TokenList));
@@ -115,6 +71,13 @@ void destroy_token_list(TokenList *list) {
     FREE(list);
 }
 
+void destroy_token_list_without_tokens(TokenList *list) {
+    if (list == NULL) return;
+    FREE(list->tokens);
+    FREE(list);
+}
+
+
 /* Imprimir a Tabela de TOKENS (Todos os elementos reconhecido dado a regras) */
 void print_token_list(TokenList *list) {
     size_t i;
@@ -122,7 +85,8 @@ void print_token_list(TokenList *list) {
         printf("Lista de tokens vazia ou nula.\n");
         return;
     }
-    printf("\n--- Lista de Tokens Gerados (%zu tokens) ---\n", list->count);
+    printf("\n--- Lista de Tokens Gerados (%zu tokens) ---\
+", list->count);
     for (i = 0; i < list->count; i++) {
         Token *t = list->tokens[i];
         if (t == NULL) {
@@ -130,7 +94,7 @@ void print_token_list(TokenList *list) {
             continue;
         }
        
-        printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string_name(t->type), t->word);
+        printf("[%3zu] Linha: %d, Tipo: %s (%s)", i, t->line, token_type_to_string(t->type), t->word);
         
        
         if (t->type == TK_NUM_INT) {
@@ -146,7 +110,7 @@ void print_token_list(TokenList *list) {
 
 
 /* Criar Token para coloca na Tabela de TokenList */
-static Token* create_new_token(TokenType type, const char* word, int num_line) {
+Token* create_new_token(TokenType type, const char* word, int num_line) {
     Token *token = (Token*)MALLOC(sizeof(Token));
     if (token == NULL) {
         perror("Erro ao alocar novo token");
@@ -175,7 +139,7 @@ void checkVariable(const char* word, int num_line, TokenList *list){
 
 /* Verificar Função */
 void checkFunction(const char* word, int num_line, TokenList *list){
-    Token *token = create_new_token(TK_FUNCAO, word, num_line);
+    Token *token = create_new_token(TK_IDENTIFICADOR, word, num_line); 
     if (token == NULL) return;
     add_token_to_list(list, token);
 }
@@ -186,12 +150,15 @@ void checkReservedWord(const char* word, int num_line, TokenList *list){
     Token *token = NULL;
     int i;
     TokenType found_type = TK_ERROR;
+
+
     for(i = 0; i < NUM_RESERVED_WORDS; i++){
         if (strcmp(reserved_words[i].word, word) == 0){
             found_type = reserved_words[i].type;
             break;
         }
     }
+
     token = create_new_token(found_type, word, num_line);
     if(found_type == TK_ERROR){
       fprintf(stderr, "[LINHA] %d | [ERROR] PALAVRA RESERVADA NÃO INDENTIFICADO: '%s'\n", num_line, token->word);
@@ -267,6 +234,7 @@ void checkNumber(const char *word, int num_line, TokenList *list){
 void checkString(const char *word, int num_line, TokenList *list){
     Token *token = create_new_token(TK_STRING, word, num_line);
     if (token == NULL) return;
+    token->value.str_val = STRDUP(word); 
     add_token_to_list(list, token); 
 }
 
@@ -303,6 +271,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
     int i = 0;
     int k = 0;
     char lexema[100];
+    char context[100];
 
     while(line[i] != '\0'){
 
@@ -327,7 +296,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             line[i] == COMMA || line[i] == SEMICOLON ||
             line[i] == OPEN_BRACKET || line[i] == CLOSE_BRACKET) {
             
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             lexema[k] = '\0';
             
             Token *token = create_new_token(TK_DELIM, lexema, num_line);
@@ -338,11 +307,11 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
 
 
-        /* Encontroy uma '!', Indicio de ser uma Variável */
+        /* Encontro uma '!', Indicio de ser uma Variável */
         if (line[i] == EXCLAMATION) {
-            if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; }
+            if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             while(line[i] != '\0' && (isalnum(line[i]) || line[i] == '_') ) {
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             }
             lexema[k] = '\0';
             checkVariable(lexema, num_line, list);
@@ -351,10 +320,10 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
         /* Achou um '__' indica o inicio de uma FUNÇÂO */
         else if(line[i] == '_' && line[i+1] == '_'){
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             while(line[i] != '\0' && isalnum(line[i])){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             }
             lexema[k] = '\0';
             checkFunction(lexema, num_line, list);
@@ -363,22 +332,27 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
         /* Começou com caracter Alphanumerico (a,b,c,d,e,...), indica que é uma PALAVRA RESERVADA*/
         else if(isalpha(line[i])){
-            while(line[i] != '\0' && isalnum(line[i])){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
-            }
-            lexema[k] = '\0';
-            checkReservedWord(lexema, num_line, list);
-            continue;
+          /* Captura lexema (variável ou palavra reservada) */
+          while(isalnum(line[i])){
+              if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+          }
+          lexema[k] = '\0';
+
+          checkReservedWord(lexema, num_line, list);
+          continue;
         }
 
         /* Começa com ' " ' (Double QUOTE), indica que é inicio de uma STRING */
         else if(line[i] == DQUOTE){
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+            if (k < sizeof(lexema) - 1) {
+              i++;
+              lexema[k++] = line[i++];
+            } else { break; } // Added break for safety
             while(line[i] != '\0' && line[i] != DQUOTE){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             }
             if (line[i] == DQUOTE) {
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k] = line[i++]; } else { break; } // Added break for safety
             } else {
                 fprintf(stderr, "[LINHA] %d | [ERROR] String literal nao terminada (aspas dupla ausente) na linha %d: '%s'\n", num_line, num_line, lexema);
                 exit(1);
@@ -393,7 +367,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             int has_period = 0;
             while (line[i] != '\0' && (isdigit(line[i]) || (line[i] == PERIOD && !has_period))){
                 if (line[i] == PERIOD) has_period = 1;
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
             }
             lexema[k] = '\0';
             checkNumber(lexema, num_line, list);

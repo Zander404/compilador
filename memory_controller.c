@@ -6,7 +6,6 @@
 
 /* Arquivo para lidar com o PSEUDO Controle de Memrória */
 size_t total_allocated_memory  = 0;
-size_t total_freed_memory = 0;
 size_t current_memory_in_use =0;
 size_t max_memory_in_use = 0;
 
@@ -48,7 +47,7 @@ char* my_strdup(const char* s, const char* file, int line) {
 /* Printar o USO de memória no terminal */
 void print_memory_report() {
     printf("\n--- Relatório de Uso de Memória ---\n");
-    printf("Memória Total Alocada (Acumulada): %zu bytes (%.2f KB)  %.2f\%\n",
+    printf("Memória Total Alocada (Acumulada): %zu bytes (%.2f KB)  %.2f%%\n",
            total_allocated_memory, ((double)total_allocated_memory / 1024.0), ( (double)total_allocated_memory*100.0)/MEMORY_SIZE);
     printf("Pico Máximo de Memória Utilizada: %zu bytes (%.2f KB)\n",
            max_memory_in_use, (double)max_memory_in_use / (1024.0));
@@ -57,9 +56,10 @@ void print_memory_report() {
 
 
 /* Levar o arquivo do 'PROGRAMA' para a memória */
-char* load_file_to_memory(const char* filename, char* buffer, size_t buffer_size){
+char* read_file_and_alloc(const char* filename, size_t* file_size_out){
   FILE* file = NULL;
   long file_size = 0;
+  char* buffer = NULL;
 
   file = fopen(filename, "rb");
   
@@ -81,25 +81,27 @@ char* load_file_to_memory(const char* filename, char* buffer, size_t buffer_size
     return NULL;
   }
 
-  
-  /* Verificar se o arquivo pode ser armazenado na memória */
-  if((size_t)file_size >= buffer_size){
-    fprintf(stderr, "Erro: Arquivo '%s' (tamanho %ld bytes) excede a memória disponível (%zu bytes). \n", filename, file_size, buffer_size);
+  buffer = (char*)MALLOC(file_size + 1);
+  if(buffer == NULL){
+    fprintf(stderr, "Erro: Falha ao alocar memória para o arquivo '%s'\n", filename);
     fclose(file);
     return NULL;
   }
 
-  /* */
   size_t bytes_read = fread(buffer, 1, file_size, file);
   if(bytes_read != (size_t)file_size){
     perror("Erro ao ler o arquivo do programa completamente");
+    FREE(buffer);
     fclose(file);
     return NULL;
   }
 
   buffer[file_size] = '\0';
+  if(file_size_out != NULL){
+    *file_size_out = file_size;
+  }
+
   fclose(file);
   return buffer;
-
 }
 

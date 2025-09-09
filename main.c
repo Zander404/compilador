@@ -3,31 +3,26 @@
 #include <string.h>
 #include "tokens.h"
 #include "lexico.h"
+#include "syntactic.h"
 #include "parser.h"
 #include "memory_controller.h"
+#include "semantic.h"
 
 
 int main(){
   char* memory_buffer = NULL;
   TokenList *token_list = NULL;
+  VarList *var_list = NULL;
   int balance_status = 0; 
   
-  /* Alocar um vetor de memoria com o tamanho da nossa memoria definida em memory_controller.h */
-  memory_buffer = (char*)malloc(MEMORY_SIZE);
-  if(memory_buffer == NULL){
-    perror("Erro ao alocar 2MB de memória");
-    return EXIT_FAILURE;
-  }
-
-
-  printf("Memória de %d MB alocada com sucesso. \n", MEMORY_SIZE / (1024 * 1024));
-  
   /* Carregar o programa para a memoria */
-  if(load_file_to_memory("./programa1.txt", memory_buffer, MEMORY_SIZE) == NULL){
-    FREE(memory_buffer);
+  size_t file_size;
+  memory_buffer = read_file_and_alloc("./programa1.txt", &file_size);
+  if(memory_buffer == NULL){
     return EXIT_FAILURE;
   }
   printf("Arquivo 'programa1.txt' carregando para a memória .\n");
+
 
 
   /* Criar a Tabela de Token */
@@ -36,8 +31,18 @@ int main(){
     FREE(memory_buffer);
     return EXIT_FAILURE;
   }
+
+  /* Tabela de Variaveis */
+  var_list = create_var_list();
+  if(var_list == NULL){
+    FREE(memory_buffer);
+    return EXIT_FAILURE;
+  }
+
   printf("Lista de Tokens criado com sucesso. \n");
 
+  // Initialize semantic analysis components
+  semantic_init();
 
   char *current_pos = memory_buffer;
   int current_line_num = 1;
@@ -71,8 +76,8 @@ int main(){
       current_pos += line_length;
     }
   }
-
-  /* Analisar se o Programa está com os Delimitadores '()', '[]', '{}', estão balanceados */
+  
+ /* Analisar se o Programa está com os Delimitadores '()', '[]', '{}', estão balanceados */
   printf("\n--- Verificando Balanceamento de Símbolos ---\n");
   balance_status = check_all_symbols_balance(token_list);
   if (balance_status) {
@@ -82,10 +87,22 @@ int main(){
   }
   printf("-----------------------------------------\n");
 
+  /* Printar tabela de tokens */
+  /* printf("\n--- Verificando Tabela de tokens ---\n"); */
+  /* print_token_list(token_list); */
+  /* printf("-----------------------------------------\n"); */
+  validate_declaration(token_list, var_list);
+  if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
+
+  print_variables(var_list);
+
+
   /*Liberar a Memória, quando a execução terminar */ 
   if(memory_buffer != NULL){ FREE(memory_buffer); printf("Memória do programa liberada.\n"); }
-  if (token_list != NULL) { destroy_token_list(token_list); printf("Lista de tokens liberada.\n"); }
+  if(var_list != NULL){ destroy_var_list(var_list); printf("Lista de Variaveis do programa liberada.\n"); }
+
   print_memory_report();
+  
 
   /* Se o tudo correto e balanceado emitir sinal de SUCESSO */
   return balance_status ? EXIT_SUCCESS : EXIT_FAILURE;
