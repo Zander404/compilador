@@ -41,7 +41,6 @@ int main(){
 
   printf("Lista de Tokens criado com sucesso. \n");
 
-  // Initialize semantic analysis components
   semantic_init();
 
   char *current_pos = memory_buffer;

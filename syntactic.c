@@ -32,7 +32,7 @@ static Variable* create_new_var(TokenType type, Token *token, Token *value, int 
     var->type = type;
     var->name = STRDUP(token->word);
     var->initialized = 1;
-    var->is_valid = true; // Initialize as valid
+    var->is_valid = true; 
 
     /* inicialização padrão (caso não tenha "valor") */
     switch (var->type) {
@@ -325,18 +325,16 @@ void validate_declaration(TokenList *token_list, VarList *var_list){
                 }
 
                 /* Logica para adiconar token de Inteiro */
-                Token *valueToken = token_list->tokens[i+2]; // This can be any literal or variable
+                Token *valueToken = token_list->tokens[i+2];
 
-                // Create variable with initialization, semantic_check_assignment_type will validate type
                 var = create_new_var(TIPO_INTEIRO, varToken, valueToken, t->line);
                 add_var_to_list(var_list, var);
 
                 /* Semantica: Checar o tipo de atribuição de tipo */
                 if (semantic_check_assignment_type(var_list, varToken, valueToken) != 0) {
-                    // Error message is already printed by semantic_check_assignment_type
                 }
 
-                i += 3; // Consume var, =, and valueToken
+                i += 3;
             } else {
 
                 var = create_new_var(TIPO_INTEIRO, varToken, NULL, t->line);

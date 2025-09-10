@@ -296,7 +296,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             line[i] == COMMA || line[i] == SEMICOLON ||
             line[i] == OPEN_BRACKET || line[i] == CLOSE_BRACKET) {
             
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } 
             lexema[k] = '\0';
             
             Token *token = create_new_token(TK_DELIM, lexema, num_line);
@@ -309,9 +309,9 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
         /* Encontro uma '!', Indicio de ser uma Variável */
         if (line[i] == EXCLAMATION) {
-            if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+            if (k < sizeof(lexema) -1) { lexema[k++] = line[i++]; } else { break; } 
             while(line[i] != '\0' && (isalnum(line[i]) || line[i] == '_') ) {
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             }
             lexema[k] = '\0';
             checkVariable(lexema, num_line, list);
@@ -320,10 +320,10 @@ void checkLine(const char *line, int num_line, TokenList *list){
 
         /* Achou um '__' indica o inicio de uma FUNÇÂO */
         else if(line[i] == '_' && line[i+1] == '_'){
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
-            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
+            if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             while(line[i] != '\0' && isalnum(line[i])){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             }
             lexema[k] = '\0';
             checkFunction(lexema, num_line, list);
@@ -334,7 +334,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
         else if(isalpha(line[i])){
           /* Captura lexema (variável ou palavra reservada) */
           while(isalnum(line[i])){
-              if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+              if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } 
           }
           lexema[k] = '\0';
 
@@ -347,12 +347,12 @@ void checkLine(const char *line, int num_line, TokenList *list){
             if (k < sizeof(lexema) - 1) {
               i++;
               lexema[k++] = line[i++];
-            } else { break; } // Added break for safety
+            } else { break; } 
             while(line[i] != '\0' && line[i] != DQUOTE){
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             }
             if (line[i] == DQUOTE) {
-                if (k < sizeof(lexema) - 1) { lexema[k] = line[i++]; } else { break; } // Added break for safety
+                if (k < sizeof(lexema) - 1) { lexema[k] = line[i++]; } else { break; }
             } else {
                 fprintf(stderr, "[LINHA] %d | [ERROR] String literal nao terminada (aspas dupla ausente) na linha %d: '%s'\n", num_line, num_line, lexema);
                 exit(1);
@@ -367,7 +367,7 @@ void checkLine(const char *line, int num_line, TokenList *list){
             int has_period = 0;
             while (line[i] != '\0' && (isdigit(line[i]) || (line[i] == PERIOD && !has_period))){
                 if (line[i] == PERIOD) has_period = 1;
-                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; } // Added break for safety
+                if (k < sizeof(lexema) - 1) { lexema[k++] = line[i++]; } else { break; }
             }
             lexema[k] = '\0';
             checkNumber(lexema, num_line, list);

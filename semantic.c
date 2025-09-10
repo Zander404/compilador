@@ -6,14 +6,14 @@
 #include "memory_controller.h"
 
 
-// Global function table
+
 FunctionList *global_function_table;
 
 void semantic_init() {
     global_function_table = create_function_list();
     if (global_function_table == NULL) {
         perror("Failed to initialize global function table");
-        // Handle error appropriately, maybe exit
+
     }
 }
 
@@ -174,17 +174,17 @@ int semantic_add_function_declaration(Token *name_token, TokenType return_type, 
         return -1;
     }
     new_func->name = STRDUP(name_token->word);
-    // Temporarily set return type for __media
+    
     if (strcmp(name_token->word, "__media") == 0) {
         new_func->return_type = TIPO_INTEIRO;
     } else {
-        new_func->return_type = return_type; // Use the passed return_type for others
+        new_func->return_type = return_type; 
     }
-    new_func->params = params; // params list is passed, not copied
+    new_func->params = params; 
 
     add_function_to_list(global_function_table, new_func);
 
-    const char *display_return_type = token_type_to_string(new_func->return_type); // Use new_func->return_type for display
+    const char *display_return_type = token_type_to_string(new_func->return_type); 
     printf("[SEMÂNTICO] Função \'%s\' declarada (tipo de retorno: %s, parametros: %zu)\n", name_token->word, display_return_type, params ? params->count : 0);
     return 0;
 }
@@ -197,10 +197,9 @@ TokenType semantic_validate_function_call(Token *name_token, TokenList *args_tok
     Function *func = find_function(global_function_table, name_token->word);
     if (!func) {
         printf("[ERRO SEMANTICO] Função '%s' não declarada (linha %d)\n", name_token->word, name_token->line);
-        return TK_UNKNOWN; // Or an appropriate error type
+        return TK_UNKNOWN; 
     }
 
-    // TODO: Add argument type checking here against func->params
 
     return func->return_type;
 }
@@ -234,7 +233,6 @@ int semantic_check_assignment_type(VarList *var_list, Token *var_token, Token *v
     if (!compatible) {
         printf("[ERRO SEMANTICO] Atribuição de tipo incompatível para '%s' (linha %d). Esperado: %s, Encontrado: %s\n",
                var_token->word, var_token->line, token_type_to_string(var_type), token_type_to_string(value_type));
-        // Get the variable and mark it as invalid
         Variable *var = find_variable(var_list, var_token->word);
         if (var) {
             var->is_valid = false;
@@ -266,8 +264,8 @@ int semantic_check_comparison_type(VarList *var_list, Token *left_operand_token,
     }
 
     if (!compatible) {
-        printf("[ERRO SEMANTICO] Tipos incompatíveis na comparação (linha %d). Operador: '%s', Tipos: %d vs %d\n",
-               operator_token->line, operator_token->word, left_type, right_type);
+        printf("[ERRO SEMANTICO] Tipos incompatíveis na comparação (linha %d). Operador: '%s', Tipos: %s vs %s\n",
+               operator_token->line, operator_token->word, token_type_to_string(left_type), token_type_to_string(right_type));
         return -1;
     }
     return 0;

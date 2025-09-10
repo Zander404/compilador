@@ -72,7 +72,7 @@ void print_variables(VarList *list) {
             printf("[%3zu] <NULL TOKEN>\n", i);
             continue;
         }
-        if (!t->is_valid) { // Only print if valid
+        if (!t->is_valid) {
             continue;
         }
 

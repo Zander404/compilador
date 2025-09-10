@@ -2,10 +2,10 @@
 #define SEMANTIC_H
 
 #include "syntactic.h"
-#include "symbol_table.h" // Include symbol_table.h for FunctionList
+#include "symbol_table.h" 
 
 /* Funções de validação semântica */
-void semantic_init(); // New function to initialize semantic analysis components
+void semantic_init();
 void check_variable_declaration(VarList *var_list, Token *token);
 void check_variable_initialized(VarList *var_list, Token *token);
 int check_type_compatibility(VarList *var_list, Token *var_token, TokenList *token_list, size_t start, size_t end);

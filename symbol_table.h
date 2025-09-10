@@ -11,8 +11,8 @@ typedef struct {
     char *name;
     TokenType type;
     int line;
-    int initialized; // 0 for false, 1 for true
-    bool is_valid; // Added field
+    int initialized; 
+    bool is_valid;
     union {
         long long int_val;
         double dec_val;

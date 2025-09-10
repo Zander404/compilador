@@ -14,7 +14,7 @@ principal(){
  inteiro !teste = __media(1,2);
  escreva("Escreva um número ");
  leia (!a);
- se (!a <= !b1) 
+ se ( !a <= !b1) 
  escreva("A é maior", !a);
  senao escreva("B é maior", !b1);
  para (!d = 0; !d<=100; !d = !d+2){
